@@ -3,10 +3,14 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.models import EntityLink, ResearchItem, SourceSignal
 from app.ingest.arxiv_adapter import ArxivAdapter
+from app.ingest.crossref_adapter import CrossrefAdapter
+from app.ingest.engineering_blog_adapter import EngineeringBlogAdapter
 from app.ingest.github_adapter import GitHubAdapter
 from app.ingest.huggingface_adapter import HuggingFaceAdapter
-from app.ingest.mock_social_adapter import MockJobsAdapter, MockSocialAdapter
+from app.ingest.mock_social_adapter import MockJobsAdapter, MockProductLaunchAdapter, MockSocialAdapter
 from app.ingest.news_adapter import NewsAdapter
+from app.ingest.papers_with_code_adapter import PapersWithCodeAdapter
+from app.ingest.semantic_scholar_adapter import SemanticScholarAdapter
 from app.ingest.normalizer import normalize_many
 from app.ingest.seed_data import demo_raw_items
 from app.memory.entity_linker import EntityLinker
@@ -19,11 +23,16 @@ class IngestionPipeline:
         settings = get_settings()
         self.adapters = [
             ArxivAdapter(),
+            SemanticScholarAdapter(),
+            CrossrefAdapter(settings.crossref_mailto),
             GitHubAdapter(settings.github_token),
             HuggingFaceAdapter(settings.huggingface_token),
+            PapersWithCodeAdapter(settings.papers_with_code_api_url),
             NewsAdapter(settings.rss_feed_list),
+            EngineeringBlogAdapter(settings.engineering_blog_feed_list),
             MockSocialAdapter(),
             MockJobsAdapter(),
+            MockProductLaunchAdapter(),
         ]
         self.linker = EntityLinker()
         self.memory = LocalVectorMemory()

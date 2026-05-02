@@ -7,6 +7,8 @@ from app.api.routes_items import router as items_router
 from app.api.routes_memory import router as memory_router
 from app.api.routes_pipeline import router as pipeline_router
 from app.api.routes_reports import router as reports_router
+from app.agent.router import router as agent_router
+from app.agent.router import start_scheduler, stop_scheduler
 from app.core.config import get_settings
 from app.db.init_db import init_db
 
@@ -26,6 +28,12 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+def on_shutdown() -> None:
+    stop_scheduler()
 
 
 app.include_router(health_router)
@@ -34,3 +42,4 @@ app.include_router(items_router)
 app.include_router(pipeline_router)
 app.include_router(memory_router)
 app.include_router(reports_router)
+app.include_router(agent_router)

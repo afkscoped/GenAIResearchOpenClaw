@@ -22,3 +22,13 @@ class MockJobsAdapter(IngestionAdapter):
         items = [item for item in demo_raw_items() if item["source"] == self.source_name]
         matched = [item for item in items if query_lower in f"{item['title']} {item['abstract']} {item['topic']}".lower()]
         return (matched or items)[:limit]
+
+
+class MockProductLaunchAdapter(IngestionAdapter):
+    source_name = "product_launch"
+
+    def fetch(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        query_lower = query.lower()
+        items = [item for item in demo_raw_items() if item["source"] == self.source_name]
+        matched = [item for item in items if query_lower in f"{item['title']} {item['abstract']} {item['topic']}".lower()]
+        return (matched or items)[:limit]

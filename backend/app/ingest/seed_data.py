@@ -222,4 +222,34 @@ def demo_raw_items() -> list[dict]:
                 }
             ],
         },
+        {
+            "title": "Launch pulse: evaluation cockpit for enterprise multimodal agents",
+            "abstract": "Mock product launch data shows a new enterprise workflow tool focused on red-team evaluation, benchmark drift, and rollout gates for multimodal agents.",
+            "source": "product_launch",
+            "url": "https://example.com/launches/evaluation-cockpit",
+            "authors": ["Launch Desk"],
+            "organizations": ["Example Product Studio"],
+            "topic": "evaluation and benchmarks",
+            "timestamp": now - timedelta(hours=14),
+            "metadata": {
+                "launch_platform": "mock_product_hunt",
+                "pricing": "beta waitlist",
+                "category": "developer tools",
+            },
+            "signals": [
+                {
+                    "source_type": "product_launch",
+                    "stars": 0,
+                    "forks": 0,
+                    "commits": 0,
+                    "model_downloads": 0,
+                    "mentions": 12,
+                    "evidence": [
+                        "Mock product launch matched Product Hunt style release feed",
+                        "Launch copy emphasizes evaluation and deployment gating",
+                    ],
+                    "raw_payload": {"upvotes": 126, "comments": 18},
+                }
+            ],
+        },
     ]

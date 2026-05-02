@@ -1,4 +1,4 @@
-import type { EntityLink, FusionReport, ItemDetail, ResearchItem, SourceSignal } from './client';
+import type { AgentAlertsResponse, EngineRun, EntityLink, FusionReport, ItemDetail, MemorySearchResult, ResearchItem, SourceSignal } from './client';
 
 export const fallbackItems: ResearchItem[] = [
   {
@@ -92,3 +92,58 @@ export function fallbackDetail(item: ResearchItem): ItemDetail {
     entity_links: fallbackLinks.filter((link) => link.source_item_id === item.id || link.target_item_id === item.id),
   };
 }
+
+export const fallbackMemoryResults: MemorySearchResult[] = fallbackItems.map((item, index) => ({
+  item_id: item.id,
+  title: item.title,
+  topic: item.topic,
+  url: item.url,
+  score: 0.88 - index * 0.16,
+  matched_terms: item.topic.split(' ').slice(0, 3),
+}));
+
+export const fallbackEngineRuns: EngineRun[] = fallbackReports.map((report, index) => ({
+  id: index + 1,
+  item_id: report.item_id,
+  signal_score: report.novelty_score,
+  signal_verdict: 'Signal trajectory remains visible in fallback mode.',
+  trust_score: report.trust_score,
+  trust_verdict: 'Trust evidence is sufficient for demo review.',
+  debate_score: report.controversy_score,
+  debate_verdict: 'Contradiction pressure estimated from fallback evidence.',
+  gap_score: report.adoption_gap_score,
+  gap_verdict: 'Adoption gap estimated from demo source mix.',
+  cross_domain_score: report.transferability_score,
+  cross_domain_verdict: 'Transferability estimated from topic metadata.',
+  created_at: new Date(Date.now() - index * 86400000).toISOString(),
+}));
+
+export const fallbackAgentAlerts: AgentAlertsResponse = {
+  alerts: [
+    {
+      route: 'alert',
+      reason: 'above_alert_threshold',
+      decided_at: new Date().toISOString(),
+      signal: {
+        ...fallbackReports[0],
+        title: fallbackItems[0].title,
+        topic: fallbackItems[0].topic,
+        source: fallbackItems[0].source,
+        url: fallbackItems[0].url,
+      },
+    },
+  ],
+  decisions: fallbackReports.map((report, index) => ({
+    route: index === 0 ? 'alert' : index === 2 ? 'weekly_brief' : 'ignored_memory_update',
+    reason: index === 0 ? 'above_alert_threshold' : index === 2 ? 'above_weekly_brief_threshold' : 'below_report_thresholds',
+    decided_at: new Date(Date.now() - index * 3600000).toISOString(),
+    signal: {
+      ...report,
+      title: fallbackItems[index]?.title ?? report.item_id,
+      topic: fallbackItems[index]?.topic ?? 'demo',
+      source: fallbackItems[index]?.source ?? 'arxiv',
+      url: fallbackItems[index]?.url ?? '#',
+    },
+  })),
+  deliveries: [{ channel: 'mock', status: 'mocked', route: 'alert' }],
+};

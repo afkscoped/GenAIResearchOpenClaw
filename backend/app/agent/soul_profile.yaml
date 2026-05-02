@@ -1,0 +1,26 @@
+name: PRISM Research Agent
+description: OpenClaw-style orchestration profile for PRISM research intelligence.
+
+monitor_topics:
+  - multimodal agents
+  - AI evaluation
+  - open source AI infrastructure
+
+thresholds:
+  alert_prism_score: 0.82
+  digest_prism_score: 0.65
+  weekly_brief_prism_score: 0.45
+  min_trust_score: 0.35
+
+channels:
+  alerts:
+    - mock
+  daily_digest:
+    - mock
+  weekly_brief:
+    - mock
+
+report_frequency:
+  daily_digest_hour_utc: 15
+  weekly_brief_day: monday
+  weekly_brief_hour_utc: 15
