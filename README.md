@@ -11,15 +11,17 @@ This repository currently contains a full-stack PRISM MVP:
 - SQLAlchemy data models
 - Pydantic API schemas
 - arXiv, GitHub, Hugging Face, RSS/news, mock social, and mock jobs ingestion adapters
+- Semantic Scholar, Crossref, optional Papers With Code, engineering blog RSS, and mock product launch adapters
 - Normalization pipeline
 - Entity linking
 - Lightweight local vector-memory fallback
 - Demo seed data
 - Five intelligence engines and real fusion scoring
+- Always-on lightweight research agent with APScheduler
 - React/Vite/Tailwind command-center dashboard
 - Markdown weekly report export
 
-Future work should focus on engine persistence, scheduled agent loops, channel delivery, richer source adapters, and optional OpenClaw-style orchestration.
+Future work should focus on channel delivery, richer source adapters, and optional OpenClaw-style orchestration.
 
 ## Repository Layout
 
@@ -33,6 +35,14 @@ backend/
       routes_memory.py
       routes_pipeline.py
       routes_reports.py
+    agent/
+      channel_dispatcher.py
+      heartbeat.py
+      router.py
+      soul_profile.py
+      soul_profile.yaml
+      state.py
+      tools.py
     core/
       config.py
     db/
@@ -42,11 +52,15 @@ backend/
     ingest/
       arxiv_adapter.py
       base.py
+      crossref_adapter.py
+      engineering_blog_adapter.py
       github_adapter.py
       huggingface_adapter.py
       mock_social_adapter.py
       news_adapter.py
       normalizer.py
+      papers_with_code_adapter.py
+      semantic_scholar_adapter.py
       pipeline.py
       seed_data.py
     memory/
@@ -127,6 +141,65 @@ Then inspect:
 - `GET /api/analysis/fusion-reports`
 - `GET /api/reports/weekly.md`
 
+## OpenClaw-Style Agent
+
+PRISM includes a lightweight OpenClaw-style agent layer. It uses PRISM's existing ingestion, memory, and engine modules as tools, then applies a SOUL profile for orchestration, alert thresholds, report routing, and channel delivery. It is disabled by default so local development stays quiet.
+
+To enable it, set these values in `backend/.env`:
+
+```bash
+ENABLE_SCHEDULER=true
+PRISM_HEARTBEAT_HOURS=6
+PRISM_AGENT_QUERY=multimodal agents
+PRISM_AGENT_LIMIT_PER_SOURCE=5
+PRISM_AGENT_INCLUDE_DEMO=true
+PRISM_SOUL_PROFILE_PATH=app/agent/soul_profile.yaml
+DISCORD_WEBHOOK_URL=
+```
+
+Start the backend normally:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+When enabled, APScheduler runs the heartbeat on startup and then every `PRISM_HEARTBEAT_HOURS` hours. Each heartbeat loads the SOUL profile, runs ingestion for monitored topics, performs entity linking and memory indexing through the existing ingestion pipeline, runs persisted engine analysis, routes each signal as `alert`, `daily_digest`, `weekly_brief`, or `ignored_memory_update`, and dispatches routed items to configured channels. It uses the FastAPI process only; no Celery, Redis, or worker service is required.
+
+Agent endpoints:
+
+- `GET /api/agent/status`: returns scheduler enabled state, current status, last run, next run, run count, details, and errors.
+- `GET /api/agent/profile`: returns the loaded SOUL profile.
+- `POST /api/agent/profile/reload`: reloads the YAML profile from disk.
+- `POST /api/agent/run-once`: manually runs one heartbeat using the same env configuration.
+- `GET /api/agent/alerts`: returns in-memory alerts, decisions, and delivery attempts.
+
+Default SOUL profile:
+
+```yaml
+name: PRISM Research Agent
+monitor_topics:
+  - multimodal agents
+  - AI evaluation
+thresholds:
+  alert_prism_score: 0.82
+  digest_prism_score: 0.65
+  weekly_brief_prism_score: 0.45
+  min_trust_score: 0.35
+channels:
+  alerts:
+    - mock
+  daily_digest:
+    - mock
+  weekly_brief:
+    - mock
+report_frequency:
+  daily_digest_hour_utc: 15
+  weekly_brief_day: monday
+  weekly_brief_hour_utc: 15
+```
+
+The `mock` channel records delivery attempts in memory. To enable Discord delivery, add `discord` to the relevant channel list in `backend/app/agent/soul_profile.yaml` and set `DISCORD_WEBHOOK_URL` in `.env`. Secrets are read only from environment configuration.
+
 ## Key API Contracts
 
 ### Normalized Research Item
@@ -172,13 +245,26 @@ Important variables:
 - `GITHUB_TOKEN`: optional, improves GitHub rate limit.
 - `HUGGINGFACE_TOKEN`: optional.
 - `NEWS_RSS_FEEDS`: comma-separated RSS feed list.
+- `ENGINEERING_BLOG_RSS_FEEDS`: comma-separated engineering blog RSS feeds.
+- `PAPERS_WITH_CODE_API_URL`: optional Papers With Code API base URL. The adapter fails safe and returns no items if the endpoint is unavailable.
+- `CROSSREF_MAILTO`: optional email for Crossref polite-pool requests.
 - `ENABLE_LLM`: reserved for future engine integration.
 - `LLM_API_KEY`: reserved for future engine integration.
+- `ENABLE_SCHEDULER`: set to `true` to start the APScheduler heartbeat.
+- `PRISM_HEARTBEAT_HOURS`: heartbeat interval in hours, minimum effective value is 1.
+- `PRISM_AGENT_QUERY`: research query used by scheduled and manual agent runs.
+- `PRISM_AGENT_LIMIT_PER_SOURCE`: per-source ingestion limit for agent runs.
+- `PRISM_AGENT_INCLUDE_DEMO`: include seeded demo data in agent runs.
+- `PRISM_SOUL_PROFILE_PATH`: YAML profile path, relative to `backend/` unless absolute.
+- `DISCORD_WEBHOOK_URL`: optional Discord webhook for agent delivery.
 
 ## Notes for the Team
 
 - The backend works offline because seeded demo data is included.
+- Every ingestion adapter fails safe and returns an empty list on network or parsing errors.
 - Twitter/X and LinkedIn are intentionally mocked to avoid scraping/API issues.
+- Product launches are mocked for demo mode, so no Product Hunt API key is required.
 - `/api/analysis/fusion-reports` now uses the real Signal, Trust, Debate, Gap, Cross-Domain, and Fusion engines.
+- `/api/agent/status` and `/api/agent/run-once` expose the always-on research loop.
 - The frontend is a polished PRISM command center with pipeline trigger, ranked queue, score cards, source constellation, charts, detail panel, evidence trace, entity links, and Markdown report export.
 - Expansion and OpenClaw integration prompts are in `docs/EXPANSION_OPENCLAW_PROMPTS.md`.

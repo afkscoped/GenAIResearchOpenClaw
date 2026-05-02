@@ -48,6 +48,22 @@ export type FusionReport = {
   evidence: string[];
 };
 
+export type EngineRun = {
+  id: number;
+  item_id: string;
+  signal_score: number;
+  signal_verdict: string;
+  trust_score: number;
+  trust_verdict: string;
+  debate_score: number;
+  debate_verdict: string;
+  gap_score: number;
+  gap_verdict: string;
+  cross_domain_score: number;
+  cross_domain_verdict: string;
+  created_at: string;
+};
+
 export type ItemDetail = {
   item: ResearchItem;
   signals: SourceSignal[];
@@ -72,6 +88,24 @@ export type MemorySearchResult = {
   matched_terms: string[];
 };
 
+export type AgentAlertDecision = {
+  route: 'alert' | 'daily_digest' | 'weekly_brief' | 'ignored_memory_update';
+  reason: string;
+  decided_at: string;
+  signal: FusionReport & {
+    title: string;
+    topic: string;
+    source: string;
+    url: string;
+  };
+};
+
+export type AgentAlertsResponse = {
+  alerts: AgentAlertDecision[];
+  decisions: AgentAlertDecision[];
+  deliveries: Array<Record<string, unknown>>;
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -89,7 +123,9 @@ export const api = {
   getItem: (id: string) => request<ItemDetail>(`/api/items/${id}`),
   listFusionReports: () => request<FusionReport[]>('/api/analysis/fusion-reports?limit=100'),
   getFusionReport: (id: string) => request<FusionReport>(`/api/analysis/fusion-reports/${id}`),
+  listEngineRuns: (id: string) => request<EngineRun[]>(`/api/analysis/engine-runs/${id}?limit=20`),
   searchMemory: (query: string) => request<MemorySearchResult[]>(`/api/memory/search?q=${encodeURIComponent(query)}&limit=8`),
   listLinks: () => request<EntityLink[]>('/api/memory/links?limit=100'),
+  listAgentAlerts: () => request<AgentAlertsResponse>('/api/agent/alerts'),
   weeklyReportUrl: () => `${API_BASE}/api/reports/weekly.md`,
 };

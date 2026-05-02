@@ -3,7 +3,19 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SourceName = Literal["arxiv", "github", "huggingface", "news", "mock_social", "mock_jobs"]
+SourceName = Literal[
+    "arxiv",
+    "github",
+    "huggingface",
+    "news",
+    "mock_social",
+    "mock_jobs",
+    "semantic_scholar",
+    "crossref",
+    "papers_with_code",
+    "product_launch",
+    "engineering_blog",
+]
 
 
 class ResearchItemBase(BaseModel):
