@@ -18,6 +18,11 @@ from app.memory.vector_store import LocalVectorMemory
 from app.schemas.research import NormalizedItem, PipelineRunResponse
 
 
+import logging
+
+logger = logging.getLogger("prism.ingest.pipeline")
+
+
 class IngestionPipeline:
     def __init__(self) -> None:
         settings = get_settings()
@@ -38,19 +43,38 @@ class IngestionPipeline:
         self.memory = LocalVectorMemory()
 
     def run(self, db: Session, query: str = "multimodal agents", limit_per_source: int = 5, include_demo: bool = True) -> PipelineRunResponse:
+        logger.info(f"🚀 Starting PRISM pipeline run for query: '{query}'")
         raw_items = demo_raw_items() if include_demo else []
+        if include_demo:
+            logger.info(f"📦 Loaded {len(raw_items)} fallback demo items.")
+            
         sources = {item["source"] for item in raw_items}
         for adapter in self.adapters:
-            fetched = adapter.fetch(query=query, limit=limit_per_source)
-            raw_items.extend(fetched)
-            if fetched:
-                sources.add(adapter.source_name)
+            logger.info(f"📡 Fetching from {adapter.source_name}...")
+            try:
+                fetched = adapter.fetch(query=query, limit=limit_per_source)
+                raw_items.extend(fetched)
+                if fetched:
+                    logger.info(f"   ✅ {adapter.source_name} returned {len(fetched)} items.")
+                    sources.add(adapter.source_name)
+                else:
+                    logger.info(f"   ➖ {adapter.source_name} returned 0 items.")
+            except Exception as e:
+                logger.error(f"   ❌ Error fetching from {adapter.source_name}: {e}")
 
+        logger.info(f"⚙️ Normalizing {len(raw_items)} raw items...")
         normalized_items = normalize_many(raw_items)
+        
+        logger.info("💾 Storing items and signals to database...")
         stored_items, stored_signals = self._store_items(db, normalized_items)
+        
+        logger.info("🔗 Running entity linker...")
         entity_links = self._store_links(db, self.linker.link_items(normalized_items))
+        
+        logger.info("🧠 Indexing memory documents...")
         memory_documents = self.memory.index_items(db, normalized_items)
 
+        logger.info(f"🏁 Pipeline complete! Stored {stored_items} items and {stored_signals} signals.")
         return PipelineRunResponse(
             ingested_items=len(normalized_items),
             stored_items=stored_items,

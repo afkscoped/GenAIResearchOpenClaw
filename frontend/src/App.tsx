@@ -1,20 +1,270 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
+import type { ReactNode } from 'react';
+
+function Reveal({
+  children,
+  delay = 0,
+  y = 32,
+  className,
+}: {
+  children: ReactNode;
+  delay?: number;
+  y?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-80px' }}
+      transition={{ duration: 0.75, delay, ease: [0.2, 0.7, 0.2, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function ScrollStagger({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <motion.div
+      className={className}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: '-80px' }}
+      variants={{
+        hidden: {},
+        show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+const stagItem = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.2, 0.7, 0.2, 1] as const } },
+} as const;
+
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 20, mass: 0.3 });
+  return (
+    <motion.div
+      style={{ scaleX, transformOrigin: '0% 50%' }}
+      className="fixed left-0 right-0 top-0 z-50 h-[2px] bg-chartreuse"
+    />
+  );
+}
+
+function Explainer({
+  label = "Editor's Note",
+  tone = 'bone',
+  children,
+}: {
+  label?: string;
+  tone?: 'bone' | 'chart' | 'blood';
+  children: ReactNode;
+}) {
+  const accent =
+    tone === 'chart' ? 'border-l-chartreuse' :
+    tone === 'blood' ? 'border-l-oxblood' :
+    'border-l-bone-dim';
+  const labelClass =
+    tone === 'chart' ? 'eyebrow eyebrow-accent' :
+    tone === 'blood' ? 'eyebrow eyebrow-blood' :
+    'eyebrow';
+  return (
+    <motion.aside
+      className={`mb-6 border-l-2 ${accent} bg-ink-deep/60 px-5 py-4`}
+      initial={{ opacity: 0, x: -12 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6 }}
+    >
+      <p className={`${labelClass} mb-2`}>— {label} —</p>
+      <div className="font-body text-[15px] leading-relaxed italic text-bone-warm space-y-2">
+        {children}
+      </div>
+    </motion.aside>
+  );
+}
+
+const engineLegend = [
+  {
+    title: 'Signal',
+    desc: 'Pre-publication buzz — GitHub stars, HuggingFace downloads, social mentions, recency. A high score means the community is already paying attention.',
+  },
+  {
+    title: 'Trust',
+    desc: 'Reproducibility checks — open code, public datasets, reported benchmarks. Low trust means claims are hard to verify independently.',
+  },
+  {
+    title: 'Debate',
+    desc: 'Controversy detection — language like "fails to replicate", "adversarial", "disputed". High debate means the field has not reached consensus.',
+  },
+  {
+    title: 'Gap Map',
+    desc: 'Distance between academic momentum and industry adoption. A high gap means strong research with zero deployment — a potential product opportunity.',
+  },
+  {
+    title: 'X-Domain',
+    desc: 'Cross-disciplinary transfer potential. Could a technique from NLP apply to drug discovery, robotics, or finance?',
+  },
+];
+
+function EngineLegend() {
+  return (
+    <motion.div
+      className="mb-8 surface p-5"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.7 }}
+    >
+      <p className="eyebrow eyebrow-accent mb-3">— Glossary · How to Read the Engines —</p>
+      <div className="rule-ticker mb-4" />
+      <div className="grid gap-px bg-rule md:grid-cols-2 xl:grid-cols-5">
+        {engineLegend.map((eng, idx) => (
+          <motion.div
+            key={eng.title}
+            className="bg-ink-deep p-4"
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: idx * 0.06 }}
+          >
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-[9px] tracking-[0.28em] text-chartreuse">
+                {String(idx + 1).padStart(2, '0')}
+              </span>
+              <h4 className="font-display text-lg italic text-bone tracking-tightest">{eng.title}</h4>
+            </div>
+            <p className="font-body mt-2 text-[13px] leading-relaxed text-bone-warm">{eng.desc}</p>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function ActionRubric() {
+  const rules = [
+    {
+      tone: 'chart' as const,
+      icon: '🚨',
+      title: 'Alert',
+      condition: 'PRISM ≥ 82 · Trust ≥ 35',
+      body: 'High-priority finding. Read the paper immediately, share with your team, and consider prototyping the technique this week.',
+    },
+    {
+      tone: 'bone' as const,
+      icon: '📝',
+      title: 'Daily Digest',
+      condition: 'PRISM ≥ 65',
+      body: 'Worth knowing about but not urgent. Skim the abstract, bookmark it, and revisit if the score rises in future runs.',
+    },
+    {
+      tone: 'blood' as const,
+      icon: '📦',
+      title: 'Ignored',
+      condition: 'Below thresholds',
+      body: 'No action needed. PRISM stores it in memory so it can influence future analysis if related papers appear later.',
+    },
+  ];
+  return (
+    <motion.div
+      className="mb-8 surface p-5"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.7 }}
+    >
+      <p className="eyebrow eyebrow-accent mb-3">— Action Rubric · What These Routes Mean —</p>
+      <p className="font-body italic text-[15px] leading-relaxed text-bone-warm mb-4">
+        The SOUL agent autonomously decides how to handle each research item based on its PRISM
+        score and trust level. Below: what action was taken for each paper, and why.
+      </p>
+      <div className="rule-ticker mb-4" />
+      <div className="grid gap-px bg-rule md:grid-cols-3">
+        {rules.map((r) => (
+          <div key={r.title} className={`bg-ink-deep p-4 border-l-2 ${
+            r.tone === 'chart' ? 'border-l-chartreuse' :
+            r.tone === 'blood' ? 'border-l-oxblood' :
+            'border-l-bone-dim'
+          }`}>
+            <div className="flex items-center gap-2">
+              <span className="text-base">{r.icon}</span>
+              <h4 className="font-display text-lg italic text-bone tracking-tightest">{r.title}</h4>
+            </div>
+            <p className="font-mono text-[9px] tracking-[0.24em] text-bone-mute uppercase mt-1">
+              {r.condition}
+            </p>
+            <p className="font-body mt-3 text-[13px] leading-relaxed text-bone-warm">{r.body}</p>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function QuadrantGuide() {
+  const cells = [
+    { pos: '↗', label: 'Top-Right', tag: 'High Trust + High Gap', body: 'The goldmine. Scientifically sound research with no industry deployment yet — your best startup and product opportunities.', tone: 'chart' },
+    { pos: '↖', label: 'Top-Left', tag: 'Low Trust + High Gap', body: 'Risky bets. Interesting findings that have not been validated enough. Wait for replication before investing resources.', tone: 'blood' },
+    { pos: '↘', label: 'Bottom-Right', tag: 'High Trust + Low Gap', body: 'Already adopted. Industry has caught up — mature, stable technologies with less competitive edge.', tone: 'bone' },
+    { pos: '↙', label: 'Bottom-Left', tag: 'Low Trust + Low Gap', body: 'Background noise. Neither novel nor robust. Safe to deprioritise unless surrounding signals shift.', tone: 'mute' },
+  ] as const;
+  return (
+    <motion.div
+      className="mt-4 surface p-5"
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.6 }}
+    >
+      <p className="eyebrow eyebrow-accent mb-3">— Quadrant Guide · How to Read the Scatter —</p>
+      <div className="rule-ticker mb-4" />
+      <div className="grid gap-px bg-rule md:grid-cols-2">
+        {cells.map((c) => (
+          <div
+            key={c.label}
+            className={`bg-ink-deep p-4 ${
+              c.tone === 'chart' ? 'border-l-2 border-l-chartreuse' :
+              c.tone === 'blood' ? 'border-l-2 border-l-oxblood' :
+              c.tone === 'bone' ? 'border-l-2 border-l-bone-dim' :
+              'border-l-2 border-l-rule'
+            }`}
+          >
+            <div className="flex items-baseline gap-3">
+              <span className="numeral text-3xl text-bone-dim" style={{ lineHeight: 1 }}>{c.pos}</span>
+              <div>
+                <h4 className="font-display text-lg italic text-bone tracking-tightest">{c.label}</h4>
+                <p className="font-mono text-[9px] tracking-[0.24em] text-bone-mute uppercase mt-0.5">{c.tag}</p>
+              </div>
+            </div>
+            <p className="font-body mt-2 text-[13px] leading-relaxed text-bone-warm">{c.body}</p>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
 import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
-  Atom,
   Bell,
   BrainCircuit,
   Command,
   Download,
   FlaskConical,
   GitBranch,
-  Globe2,
   Layers3,
   Loader2,
   Network,
-  Orbit,
   Radar as RadarIcon,
   RefreshCw,
   Search,
@@ -68,16 +318,16 @@ import { SignalConstellation } from './components/SignalConstellation';
 
 type ViewKey = 'command' | 'topics' | 'battle' | 'atlas' | 'radar' | 'history' | 'alerts';
 
-const sourceColors = ['#22d3ee', '#a78bfa', '#fb7185', '#f59e0b', '#34d399', '#60a5fa'];
+const sourceColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#3E5C5A', '#A8A092', '#7B1E1E'];
 
-const views: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = [
-  { key: 'command', label: 'Command', icon: Activity },
-  { key: 'topics', label: 'Topics', icon: Telescope },
-  { key: 'battle', label: 'Battle', icon: Swords },
-  { key: 'atlas', label: 'Gap Atlas', icon: Layers3 },
-  { key: 'radar', label: 'X-Domain', icon: RadarIcon },
-  { key: 'history', label: 'History', icon: TrendingUp },
-  { key: 'alerts', label: 'Alerts', icon: Bell },
+const views: Array<{ key: ViewKey; label: string; icon: typeof Activity; numeral: string }> = [
+  { key: 'command',  label: 'Front Page', icon: Activity,     numeral: 'I' },
+  { key: 'topics',   label: 'Terrain',    icon: Telescope,    numeral: 'II' },
+  { key: 'battle',   label: 'Discord',    icon: Swords,       numeral: 'III' },
+  { key: 'atlas',    label: 'Atlas',      icon: Layers3,      numeral: 'IV' },
+  { key: 'radar',    label: 'Transfer',   icon: RadarIcon,    numeral: 'V' },
+  { key: 'history',  label: 'Chronicle',  icon: TrendingUp,   numeral: 'VI' },
+  { key: 'alerts',   label: 'Dispatch',   icon: Bell,         numeral: 'VII' },
 ];
 
 function byReport(items: ResearchItem[], reports: FusionReport[]) {
@@ -132,10 +382,6 @@ function topicData(items: ResearchItem[], reports: FusionReport[]) {
     .sort((left, right) => right.score - left.score);
 }
 
-function reportFor(item: ResearchItem, reports: FusionReport[]) {
-  return reports.find((report) => report.item_id === item.id) ?? fallbackReports[0];
-}
-
 function App() {
   const [items, setItems] = useState<ResearchItem[]>(fallbackItems);
   const [reports, setReports] = useState<FusionReport[]>(fallbackReports);
@@ -146,9 +392,10 @@ function App() {
   const [memoryResults, setMemoryResults] = useState<MemorySearchResult[]>(fallbackMemoryResults);
   const [loading, setLoading] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [notice, setNotice] = useState('Demo fallback loaded. Run the backend pipeline to switch to live PRISM memory.');
+  const [notice, setNotice] = useState('Demo edition · run the backend pipeline to print live PRISM memory.');
   const [query, setQuery] = useState('multimodal agents');
   const [activeView, setActiveView] = useState<ViewKey>('command');
+  const [now] = useState(() => new Date());
 
   const ranked = useMemo(() => byReport(items, reports), [items, reports]);
   const selected = ranked.find((entry) => entry.item.id === selectedId) ?? ranked[0];
@@ -171,16 +418,16 @@ function App() {
         setReports(nextReports.length > 0 ? nextReports : fallbackReports);
         setSelectedId(nextItems[0].id);
         setAlerts(nextAlerts);
-        setNotice('Live backend data loaded from PRISM memory.');
+        setNotice('Live edition · backend memory engaged.');
       } else {
-        setNotice('Backend is reachable but has no data yet. Run the pipeline.');
+        setNotice('Backend reachable · awaiting first pipeline run.');
       }
     } catch (error) {
       setItems(fallbackItems);
       setReports(fallbackReports);
       setSelectedId(fallbackItems[0].id);
       setAlerts(fallbackAgentAlerts);
-      setNotice('Backend unavailable. Showing offline demo constellation.');
+      setNotice('Offline edition · printing demo constellation.');
     } finally {
       setLoading(false);
     }
@@ -190,10 +437,10 @@ function App() {
     setLoading(true);
     try {
       const result = await api.runPipeline(query);
-      setNotice(`Pipeline complete: ${result.ingested_items} ingested, ${result.stored_items} new items, ${result.entity_links} links.`);
+      setNotice(`Press run · ${result.ingested_items} ingested / ${result.stored_items} new / ${result.entity_links} links.`);
       await loadLiveData();
     } catch (error) {
-      setNotice('Could not run backend pipeline. Keep using fallback mode or start FastAPI.');
+      setNotice('Pipeline unreachable · holding the demo edition.');
       setLoading(false);
     }
   }
@@ -215,10 +462,7 @@ function App() {
   useEffect(() => {
     const item = items.find((entry) => entry.id === selectedId);
     if (!item) return;
-    api
-      .getItem(item.id)
-      .then(setDetail)
-      .catch(() => setDetail(fallbackDetail(item)));
+    api.getItem(item.id).then(setDetail).catch(() => setDetail(fallbackDetail(item)));
     api
       .listEngineRuns(item.id)
       .then((runs) => setHistory(runs.length > 0 ? runs : fallbackEngineRuns))
@@ -254,29 +498,44 @@ function App() {
     setActiveView,
   };
 
+  const dateLabel = now.toLocaleDateString('en-GB', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  }).toUpperCase();
+
   return (
-    <main className="min-h-screen overflow-hidden px-4 py-6 md:px-8 lg:px-10">
-      <div className="pointer-events-none fixed inset-0 prism-grid opacity-30" />
-      <div className="relative mx-auto max-w-7xl">
+    <main className="min-h-screen px-4 py-6 md:px-10 lg:px-14">
+      <ScrollProgress />
+      <div className="mx-auto max-w-[1400px]">
+        <Masthead dateLabel={dateLabel} notice={notice} loading={loading} />
         <NavBar
           activeView={activeView}
-          loading={loading}
           query={query}
           setActiveView={setActiveView}
           setPaletteOpen={setPaletteOpen}
           setQuery={setQuery}
           runPipeline={runPipeline}
+          loading={loading}
         />
 
-        {activeView === 'command' && <CommandCenter notice={notice} {...shellProps} />}
-        {activeView === 'topics' && <TopicExplorer topics={topics} ranked={ranked} setSelectedId={setSelectedId} setActiveView={setActiveView} />}
-        {activeView === 'battle' && <ContradictionBattle ranked={ranked} />}
-        {activeView === 'atlas' && <AdoptionGapAtlas ranked={ranked} topics={topics} />}
-        {activeView === 'radar' && <CrossDomainRadar ranked={ranked} />}
-        {activeView === 'history' && <EngineHistoryChart history={history} selectedTitle={selected?.item.title ?? 'Selected item'} />}
-        {activeView === 'alerts' && <AlertCenter alerts={alerts} />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeView}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.45, ease: [0.2, 0.7, 0.2, 1] }}
+          >
+            {activeView === 'command' && <CommandCenter notice={notice} {...shellProps} />}
+            {activeView === 'topics' && <TopicExplorer topics={topics} ranked={ranked} setSelectedId={setSelectedId} setActiveView={setActiveView} />}
+            {activeView === 'battle' && <ContradictionBattle ranked={ranked} />}
+            {activeView === 'atlas' && <AdoptionGapAtlas ranked={ranked} topics={topics} />}
+            {activeView === 'radar' && <CrossDomainRadar ranked={ranked} />}
+            {activeView === 'history' && <EngineHistoryChart history={history} selectedTitle={selected?.item.title ?? 'Selected dispatch'} />}
+            {activeView === 'alerts' && <AlertCenter alerts={alerts} />}
+          </motion.div>
+        </AnimatePresence>
 
-        <Footer />
+        <Colophon />
       </div>
       {paletteOpen && (
         <MemoryPalette
@@ -290,6 +549,87 @@ function App() {
         />
       )}
     </main>
+  );
+}
+
+function Masthead({ dateLabel, notice, loading }: { dateLabel: string; notice: string; loading: boolean }) {
+  const letters = 'Research Intelligence Command Center'.split('  ');
+  return (
+    <motion.header
+      className="mb-8"
+      initial={{ opacity: 0, y: -16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, ease: [0.2, 0.7, 0.2, 1] }}
+    >
+      <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.32em] text-bone-mute uppercase">
+        <div className="flex items-center gap-3">
+          <span className="pulse-dot" />
+          <span>{loading ? 'Updating press' : 'On press'}</span>
+          <span className="text-bone-dim">·</span>
+          <span>{dateLabel}</span>
+        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={notice}
+            className="hidden md:flex items-center gap-3"
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.4 }}
+          >
+            <span>VOL. I</span>
+            <span className="text-bone-dim">/</span>
+            <span>EDITION 04</span>
+            <span className="text-bone-dim">/</span>
+            <span className="text-chartreuse">{notice}</span>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <motion.div
+        className="rule-double mt-3 origin-left"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.9, delay: 0.2, ease: [0.2, 0.7, 0.2, 1] }}
+      />
+      <div className="mt-3 flex items-end justify-between">
+        <h1
+          className="prism-title leading-none tracking-tightest"
+          style={{ fontSize: 'clamp(1.5rem, 6vw, 5.5rem)', fontFamily: 'Times New Roman, serif', fontWeight: 400, fontVariationSettings: '"opsz" 144, "SOFT" 80, "WONK" 0' }}
+          aria-label="Research Intelligence Command Center"
+        >
+          {letters.map((letter, i) => (
+            <motion.span
+              key={i}
+              style={{ display: 'inline-block', color: '#E74C3C' }}
+              initial={{ opacity: 0, y: 60, rotate: -6 }}
+              animate={{ opacity: 1, y: 0, rotate: 0 }}
+              transition={{
+                duration: 0.9,
+                delay: 0.3 + i * 0.07,
+                ease: [0.2, 0.7, 0.2, 1],
+              }}
+            >
+              {letter}
+            </motion.span>
+          ))}
+        </h1>
+        <motion.div
+          className="hidden md:block text-right"
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.7, delay: 0.7 }}
+        >
+          <p className="font-mono text-[10px] tracking-[0.3em] text-bone-mute">A Quarterly of Imminent Research</p>
+          <p className="font-mono text-[10px] tracking-[0.3em] text-bone-mute">— Founded MMXXV —</p>
+        </motion.div>
+      </div>
+      <motion.div
+        className="rule-double mt-3 origin-right"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.9, delay: 0.4, ease: [0.2, 0.7, 0.2, 1] }}
+      />
+    </motion.header>
   );
 }
 
@@ -311,60 +651,72 @@ function NavBar({
   runPipeline: () => void;
 }) {
   return (
-    <nav className="mb-8 rounded-[2rem] border border-white/10 bg-slate-950/60 p-4 shadow-prism backdrop-blur-xl">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 via-violet-400 to-fuchsia-500 text-slate-950 shadow-prism">
-            <Orbit size={28} />
-            <div className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-emerald-300 shadow-[0_0_24px_#34d399]" />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.42em] text-cyan-300">PRISM</p>
-            <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">Research Intelligence Command Center</h1>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <button onClick={() => setPaletteOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10">
-            <Command size={16} />
-            Memory
-          </button>
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-            <Search size={16} className="text-slate-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500 md:w-52"
-              placeholder="research query"
-            />
-          </div>
-          <button onClick={runPipeline} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-200">
-            {loading ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
-            Run PRISM
-          </button>
-          <a href={api.weeklyReportUrl()} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10">
-            <Download size={16} />
-            Brief
-          </a>
-        </div>
-      </div>
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {views.map((view) => {
+    <motion.nav
+      className="mb-10 space-y-4"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay: 0.9 }}
+    >
+      {/* Top tab strip — compact section toggles */}
+      <div className="flex items-stretch overflow-x-auto border border-rule bg-ink-deep">
+        {views.map((view, idx) => {
           const Icon = view.icon;
+          const active = activeView === view.key;
           return (
-            <button
+            <motion.button
               key={view.key}
               onClick={() => setActiveView(view.key)}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-[0.16em] transition ${
-                activeView === view.key ? 'bg-cyan-300 text-slate-950' : 'border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10'
-              }`}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              className={`group relative flex shrink-0 items-center gap-2 px-4 py-2.5 transition-colors ${
+                idx > 0 ? 'border-l border-rule' : ''
+              } ${active ? 'text-ink' : 'text-bone-dim hover:bg-ink-soft hover:text-bone'}`}
             >
-              <Icon size={14} />
-              {view.label}
-            </button>
+              {active && (
+                <motion.div
+                  layoutId="active-tab"
+                  className="absolute inset-0 bg-chartreuse"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className={`relative z-10 font-mono text-[9px] tracking-[0.28em] ${active ? 'text-ink' : 'text-bone-mute group-hover:text-bone-dim'}`}>
+                {view.numeral}
+              </span>
+              <Icon size={12} strokeWidth={1.6} className="relative z-10" />
+              <span className={`relative z-10 font-mono text-[10px] tracking-[0.22em] uppercase font-medium ${active ? 'text-ink' : ''}`}>
+                {view.label}
+              </span>
+            </motion.button>
           );
         })}
       </div>
-    </nav>
+
+      {/* Below — query + actions */}
+      <div className="flex flex-wrap items-center gap-3 border border-rule bg-ink-deep px-4 py-3">
+        <div className="flex flex-1 min-w-[220px] items-center gap-2">
+          <Search size={14} className="text-chartreuse" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => { if (event.key === 'Enter') runPipeline(); }}
+            className="editorial-input"
+            placeholder="enter research inquiry"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setPaletteOpen(true)} className="btn">
+            <Command size={12} /> Memory
+          </button>
+          <button onClick={runPipeline} className="btn-primary btn">
+            {loading ? <Loader2 className="animate-spin" size={12} /> : <RefreshCw size={12} />}
+            Run Press
+          </button>
+          <a href={api.weeklyReportUrl()} className="btn-blood btn">
+            <Download size={12} /> Brief
+          </a>
+        </div>
+      </div>
+    </motion.nav>
   );
 }
 
@@ -382,84 +734,191 @@ function CommandCenter({
 }: any) {
   return (
     <>
-      <section className="mb-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="glass relative overflow-hidden rounded-[2.2rem] p-7 md:p-9">
-          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
-          <div className="absolute -bottom-24 left-1/2 h-72 w-72 rounded-full bg-fuchsia-500/20 blur-3xl" />
-          <div className="relative z-10 grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
-            <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-cyan-200">
-                <Activity size={14} /> always-on agent loop
-              </div>
-              <h2 className="max-w-3xl text-4xl font-black leading-tight text-white md:text-6xl">
-                Detect what will matter before it becomes obvious.
-              </h2>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300">
-                PRISM fuses early source signals, replication risk, debate clusters, adoption gaps, and cross-domain sparks into one explainable intelligence stream.
+      {/* HERO — broken grid editorial spread */}
+      <section className="mb-16 grid grid-cols-12 gap-6 lg:gap-10">
+        <motion.div
+          className="col-span-12 lg:col-span-8"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.1, ease: [0.2, 0.7, 0.2, 1] }}
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <span className="chip chip-chart">— Lead Story —</span>
+            <span className="font-mono text-[10px] tracking-[0.32em] text-bone-mute uppercase">
+              §I · Front Page
+            </span>
+            <div className="flex-1 rule-ticker" />
+            <span className="font-mono text-[10px] tracking-[0.32em] text-bone-mute">
+              p. 01
+            </span>
+          </div>
+          <h2
+            className="headline mb-8"
+            style={{ fontSize: 'clamp(2.5rem, 6.4vw, 6rem)' }}
+          >
+            Detect what will <em>matter</em>
+            <br />
+            before it becomes obvious.
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-start">
+            <p className="body-serif max-w-xl border-l-2 border-oxblood pl-5">
+              <span className="font-display text-3xl float-left mr-2 leading-none italic text-oxblood-glow">P</span>
+              RISM fuses early source signals, replication risk, debate clusters,
+              adoption gaps, and cross-domain sparks into one explainable
+              intelligence stream — published in the open, read like a paper.
+            </p>
+            <div className="hidden md:block w-px self-stretch bg-rule" />
+            <div className="space-y-2 max-w-[200px]">
+              <p className="eyebrow eyebrow-blood">Status Bulletin</p>
+              <p className="font-body text-sm italic leading-snug text-bone-warm">
+                {notice}
               </p>
-              <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300">
-                <span className="font-bold text-cyan-200">Status:</span> {notice}
-              </div>
             </div>
-            <ScoreOrb label="PRISM priority" score={topReport?.prism_score ?? 0} tone="violet" size="lg" />
           </div>
-        </div>
+        </motion.div>
+        <motion.aside
+          className="col-span-12 lg:col-span-4 lg:border-l lg:border-rule lg:pl-10"
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 1.3, ease: [0.2, 0.7, 0.2, 1] }}
+        >
+          <div className="flex justify-center lg:justify-end">
+            <ScoreOrb label="PRISM Priority" score={topReport?.prism_score ?? 0} size="lg" />
+          </div>
+          <div className="mt-8 space-y-3 text-right">
+            <p className="eyebrow">Verdict / abridged</p>
+            <p className="font-display text-2xl italic text-bone leading-tight">
+              "{topReport?.verdict?.split('.')[0] ?? 'Awaiting first transmission'}."
+            </p>
+          </div>
+        </motion.aside>
+      </section>
+
+      <motion.div
+        className="rule-ticker mb-12 origin-left"
+        initial={{ scaleX: 0 }}
+        whileInView={{ scaleX: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 1, ease: [0.2, 0.7, 0.2, 1] }}
+      />
+
+      {/* CONSTELLATION */}
+      <Reveal className="mb-16">
         <SignalConstellation items={items} />
+      </Reveal>
+
+      {/* ENGINE STRIP */}
+      <section className="mb-16">
+        <Reveal>
+          <SectionHeader numeral="§ IV" eyebrow="The Five Engines" title="Today's instrument readings" />
+        </Reveal>
+        <EngineLegend />
+        <ScrollStagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {[
+            { title: 'Signal', subtitle: 'pre-publication traction', score: selectedReport?.novelty_score ?? 0, icon: Zap },
+            { title: 'Trust', subtitle: 'replication readiness', score: selectedReport?.trust_score ?? 0, icon: ShieldCheck },
+            { title: 'Debate', subtitle: 'claim conflict pressure', score: selectedReport?.controversy_score ?? 0, icon: FlaskConical },
+            { title: 'Gap Map', subtitle: 'industry lag index', score: selectedReport?.adoption_gap_score ?? 0, icon: Layers3 },
+            { title: 'X-Domain', subtitle: 'transfer opportunity', score: selectedReport?.transferability_score ?? 0, icon: RadarIcon },
+          ].map((card) => (
+            <motion.div key={card.title} variants={stagItem} initial="hidden" animate="show" whileHover={{ y: -4 }}>
+              <EngineCard {...card} gradient="" />
+            </motion.div>
+          ))}
+        </ScrollStagger>
       </section>
 
-      <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <EngineCard title="Signal" subtitle="pre-publication traction" score={selectedReport?.novelty_score ?? 0} icon={Zap} gradient="from-cyan-300 to-blue-600" />
-        <EngineCard title="Trust" subtitle="replication readiness" score={selectedReport?.trust_score ?? 0} icon={ShieldCheck} gradient="from-emerald-300 to-teal-600" />
-        <EngineCard title="Debate" subtitle="claim conflict pressure" score={selectedReport?.controversy_score ?? 0} icon={FlaskConical} gradient="from-rose-300 to-pink-600" />
-        <EngineCard title="Gap Map" subtitle="industry lag index" score={selectedReport?.adoption_gap_score ?? 0} icon={Layers3} gradient="from-amber-200 to-orange-600" />
-        <EngineCard title="X-Domain" subtitle="transfer opportunity" score={selectedReport?.transferability_score ?? 0} icon={RadarIcon} gradient="from-violet-300 to-fuchsia-600" />
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="space-y-6">
-          <RankedQueue ranked={ranked} selectedId={selected?.item.id} setSelectedId={setSelectedId} />
-          <SourceMix sourceData={sourceData} />
+      {/* TWO-COLUMN GAZETTE BODY */}
+      <section className="grid gap-10 xl:grid-cols-[0.85fr_1.15fr]">
+        <div className="space-y-10">
+          <Reveal>
+            <RankedQueue ranked={ranked} selectedId={selected?.item.id} setSelectedId={setSelectedId} />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <SourceMix sourceData={sourceData} />
+          </Reveal>
         </div>
-        <div className="space-y-6">
-          {selected && selectedReport && <DetailPanel selected={selected} selectedReport={selectedReport} />}
-          <div className="grid gap-6 lg:grid-cols-2">
-            <EvidencePanel title="explainability trace" evidence={selectedReport?.evidence ?? []} />
-            <EntityLinks detail={detail} />
-          </div>
-          <EngineTrend timelineData={timelineData} />
+        <div className="space-y-10">
+          {selected && selectedReport && (
+            <Reveal>
+              <DetailPanel selected={selected} selectedReport={selectedReport} />
+            </Reveal>
+          )}
+          <ScrollStagger className="grid gap-6 lg:grid-cols-2">
+            <motion.div variants={stagItem} initial="hidden" animate="show">
+              <EvidencePanel title="Explainability Trace" evidence={selectedReport?.evidence ?? []} />
+            </motion.div>
+            <motion.div variants={stagItem} initial="hidden" animate="show">
+              <EntityLinks detail={detail} />
+            </motion.div>
+          </ScrollStagger>
+          <Reveal>
+            <EngineTrend timelineData={timelineData} />
+          </Reveal>
         </div>
       </section>
     </>
   );
 }
 
+function SectionHeader({ numeral, eyebrow, title }: { numeral: string; eyebrow: string; title: string }) {
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-4">
+        <span className="font-mono text-[10px] tracking-[0.32em] text-chartreuse">{numeral}</span>
+        <span className="eyebrow">{eyebrow}</span>
+        <div className="flex-1 rule-ticker" />
+      </div>
+      <h2 className="font-display mt-3 text-3xl tracking-tightest text-bone md:text-4xl">
+        {title}
+      </h2>
+    </div>
+  );
+}
+
 function RankedQueue({ ranked, selectedId, setSelectedId }: any) {
   return (
-    <div className="glass rounded-[2rem] p-5">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">ranked opportunities</p>
-          <h2 className="mt-2 text-2xl font-black text-white">PRISM queue</h2>
-        </div>
-        <Telescope className="text-cyan-200" />
-      </div>
-      <div className="space-y-3">
-        {ranked.map(({ item, report }: { item: ResearchItem; report?: FusionReport }) => (
-          <button
-            key={item.id}
-            onClick={() => setSelectedId(item.id)}
-            className={`w-full rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${selectedId === item.id ? 'border-cyan-300/60 bg-cyan-300/10' : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'}`}
-          >
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <h3 className="line-clamp-2 text-sm font-bold text-white">{item.title}</h3>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-cyan-100">{Math.round((report?.prism_score ?? 0) * 100)}</span>
-            </div>
-            <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-              <span className="rounded-full bg-slate-900 px-2 py-1">{item.source.replace('_', ' ')}</span>
-              <span className="rounded-full bg-slate-900 px-2 py-1">{scoreLabel(report?.prism_score ?? 0)}</span>
-            </div>
-          </button>
-        ))}
+    <div>
+      <SectionHeader numeral="§ V" eyebrow="Ranked Dispatches" title="The priority queue" />
+      <Explainer label="How to Use This Queue">
+        All discovered research items, ranked by their overall PRISM priority score. Higher numbers
+        mean stronger combined signals across all five engines. Click any item to inspect its full
+        analysis on the right.
+      </Explainer>
+      <div className="surface">
+        {ranked.map(({ item, report }: { item: ResearchItem; report?: FusionReport }, index: number) => {
+          const active = selectedId === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setSelectedId(item.id)}
+              className={`w-full border-b border-rule px-5 py-5 text-left transition-colors last:border-b-0 ${active ? 'bg-chartreuse/5' : 'hover:bg-ink-soft'}`}
+            >
+              <div className="flex items-start gap-4">
+                <span className="numeral shrink-0 text-3xl text-bone-mute" style={{ lineHeight: 1 }}>
+                  {(index + 1).toString().padStart(2, '0')}
+                </span>
+                <div className="flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2 font-mono text-[9px] tracking-[0.22em] text-bone-mute uppercase">
+                    <span>{item.source.replace('_', ' ')}</span>
+                    <span>·</span>
+                    <span>{item.topic}</span>
+                    <span>·</span>
+                    <span className={(report?.prism_score ?? 0) >= 0.55 ? 'text-chartreuse' : 'text-oxblood-glow'}>
+                      {scoreLabel(report?.prism_score ?? 0)}
+                    </span>
+                  </div>
+                  <h3 className={`font-display text-lg leading-snug ${active ? 'text-chartreuse' : 'text-bone'}`}>
+                    {item.title}
+                  </h3>
+                </div>
+                <span className={`numeral text-3xl ${active ? 'text-chartreuse' : 'text-bone'}`} style={{ lineHeight: 1 }}>
+                  {Math.round((report?.prism_score ?? 0) * 100)}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -467,20 +926,28 @@ function RankedQueue({ ranked, selectedId, setSelectedId }: any) {
 
 function SourceMix({ sourceData }: { sourceData: Array<{ name: string; value: number }> }) {
   return (
-    <div className="glass rounded-[2rem] p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">source mix</p>
-      <div className="mt-5 h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={sourceData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" />
-            <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-            <YAxis stroke="#94a3b8" fontSize={11} />
-            <Tooltip contentStyle={{ background: '#020617', border: '1px solid rgba(148,163,184,.25)', borderRadius: 16 }} />
-            <Bar dataKey="value" radius={[12, 12, 4, 4]}>
-              {sourceData.map((entry, index) => <Cell key={entry.name} fill={sourceColors[index % sourceColors.length]} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+    <div>
+      <SectionHeader numeral="§ VI" eyebrow="Source Mix" title="Where the signal originates" />
+      <Explainer label="Why This Matters">
+        A healthy intelligence pipeline draws from multiple channels. If one bar dominates, you may
+        be missing insights from the others — consider broadening your monitored sources.
+      </Explainer>
+      <div className="surface p-5">
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={sourceData}>
+              <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
+              <XAxis dataKey="name" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+              <Bar dataKey="value" radius={0}>
+                {sourceData.map((entry, index) => (
+                  <Cell key={entry.name} fill={sourceColors[index % sourceColors.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
@@ -488,49 +955,78 @@ function SourceMix({ sourceData }: { sourceData: Array<{ name: string; value: nu
 
 function DetailPanel({ selected, selectedReport }: any) {
   return (
-    <section className="glass overflow-hidden rounded-[2rem] p-6">
-      <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <div className="mb-3 flex flex-wrap gap-2">
-            <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">{selected.item.source.replace('_', ' ')}</span>
-            <span className="rounded-full bg-violet-300/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-violet-200">{selected.item.topic}</span>
+    <section>
+      <SectionHeader numeral="§ II" eyebrow="Feature" title="Selected dispatch" />
+      <article className="surface relative p-8">
+        <div className="absolute top-0 right-0 diagonal-strike h-full w-24 pointer-events-none" />
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="chip">{selected.item.source.replace('_', ' ')}</span>
+          <span className="chip chip-bone">{selected.item.topic}</span>
+          <span className="font-mono text-[10px] tracking-[0.22em] text-bone-mute ml-auto">
+            DOI / {selected.item.id.slice(0, 8)}
+          </span>
+        </div>
+        <h2 className="headline" style={{ fontSize: 'clamp(1.75rem, 3.4vw, 2.75rem)' }}>
+          {selected.item.title}
+        </h2>
+        <div className="my-5 rule-ticker" />
+        <p className="body-serif columns-1 md:columns-2 gap-8">
+          <span className="font-display text-5xl float-left mr-2 leading-none italic text-oxblood-glow">
+            {selected.item.abstract.charAt(0)}
+          </span>
+          {selected.item.abstract.slice(1)}
+        </p>
+        <div className="mt-6 flex items-center gap-4">
+          <a href={selected.item.url} target="_blank" rel="noreferrer" className="editorial-link font-mono text-[11px] tracking-[0.22em] uppercase">
+            Read source <ArrowUpRight size={12} className="inline" />
+          </a>
+          <div className="flex-1 rule-ticker" />
+        </div>
+        <div className="mt-6 surface-inset p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <BrainCircuit size={14} className="text-chartreuse" strokeWidth={1.4} />
+            <span className="eyebrow eyebrow-accent">Fusion Verdict</span>
           </div>
-          <h2 className="text-3xl font-black leading-tight text-white">{selected.item.title}</h2>
-          <p className="mt-4 text-sm leading-7 text-slate-300">{selected.item.abstract}</p>
+          <p className="font-display italic text-xl leading-snug text-bone">
+            "{selectedReport.verdict}"
+          </p>
+          <p className="font-body mt-3 text-[13px] italic text-bone-mute leading-relaxed">
+            Generated by the OpenClaw AI agent, which reads the abstract together with all five
+            engine scores to produce a context-aware, actionable assessment.
+          </p>
         </div>
-        <a href={selected.item.url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white hover:bg-white/10">
-          Source <ArrowUpRight size={16} />
-        </a>
-      </div>
-      <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">
-        <div className="mb-2 flex items-center gap-3 text-cyan-200">
-          <BrainCircuit size={20} />
-          <span className="text-xs font-bold uppercase tracking-[0.28em]">fusion verdict</span>
-        </div>
-        <p className="text-lg font-bold text-white">{selectedReport.verdict}</p>
-      </div>
+      </article>
     </section>
   );
 }
 
 function EntityLinks({ detail }: { detail: ItemDetail }) {
   return (
-    <section className="glass rounded-3xl p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="rounded-2xl bg-violet-400/10 p-2 text-violet-300">
-          <Network size={18} />
-        </div>
-        <h3 className="text-sm font-bold uppercase tracking-[0.24em] text-slate-300">linked intelligence</h3>
+    <section className="surface p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <Network size={14} className="text-oxblood-glow" strokeWidth={1.4} />
+        <p className="eyebrow eyebrow-blood">Linked Intelligence</p>
       </div>
-      <div className="space-y-3">
-        {detail.entity_links.length === 0 && <p className="text-sm text-slate-400">No entity links in fallback detail for this item yet.</p>}
+      <p className="font-body mb-4 text-[13px] italic text-bone-mute leading-relaxed">
+        PRISM automatically discovers relationships between papers, repositories, datasets, and
+        models. Confidence shows how strongly each link is supported by shared evidence.
+      </p>
+      <div className="rule-ticker mb-4" />
+      <div className="space-y-4">
+        {detail.entity_links.length === 0 && (
+          <p className="font-body text-sm italic text-bone-mute">
+            No entity links printed in this edition.
+          </p>
+        )}
         {detail.entity_links.map((link) => (
-          <div key={link.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <div key={link.id} className="border-b border-rule pb-4 last:border-b-0 last:pb-0">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-bold text-white">{link.relation_type.replace('_', ' ')}</span>
-              <span className="text-xs font-black text-cyan-200">{Math.round(link.confidence * 100)}%</span>
+              <span className="font-display italic text-bone">{link.relation_type.replace('_', ' ')}</span>
+              <span className="numeral text-2xl text-chartreuse" style={{ lineHeight: 1 }}>
+                {Math.round(link.confidence * 100)}<span className="text-xs text-bone-mute font-mono ml-1">%</span>
+              </span>
             </div>
-            <p className="mt-2 text-xs text-slate-400">{link.evidence.join(' / ')}</p>
+            <p className="font-body mt-2 text-sm text-bone-warm italic">{link.evidence.join(' / ')}</p>
           </div>
         ))}
       </div>
@@ -540,31 +1036,44 @@ function EntityLinks({ detail }: { detail: ItemDetail }) {
 
 function EngineTrend({ timelineData }: { timelineData: Array<Record<string, number | string>> }) {
   return (
-    <section className="glass rounded-[2rem] p-5">
-      <div className="mb-5 flex items-center gap-3">
-        <Globe2 className="text-cyan-200" />
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">opportunity atlas</p>
-          <h3 className="text-xl font-black text-white">engine trend contours</h3>
+    <section>
+      <SectionHeader numeral="§ VII" eyebrow="Trend Contours" title="The engine over time" />
+      <Explainer label="Reading the Contours">
+        <p>
+          <span className="text-chartreuse not-italic">Chartreuse</span> tracks novelty — pre-publication
+          buzz building up. <span className="text-bone not-italic">Bone</span> tracks trust as
+          reproducibility evidence accumulates. <span className="text-oxblood-glow not-italic">Oxblood</span>{' '}
+          tracks the adoption gap between research momentum and industry uptake.
+        </p>
+      </Explainer>
+      <div className="surface p-5">
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={timelineData}>
+              <defs>
+                <linearGradient id="novelty" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#D6FF3D" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="#D6FF3D" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="trust" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EDE6D3" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#EDE6D3" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gap" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#A82A2A" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="#A82A2A" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
+              <XAxis dataKey="name" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+              <Area type="monotone" dataKey="novelty" stroke="#D6FF3D" fill="url(#novelty)" strokeWidth={2} />
+              <Area type="monotone" dataKey="trust"   stroke="#EDE6D3" fill="url(#trust)"   strokeWidth={2} />
+              <Area type="monotone" dataKey="gap"     stroke="#A82A2A" fill="url(#gap)"     strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-      </div>
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={timelineData}>
-            <defs>
-              <linearGradient id="novelty" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22d3ee" stopOpacity={0.55}/><stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/></linearGradient>
-              <linearGradient id="trust" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#34d399" stopOpacity={0.45}/><stop offset="95%" stopColor="#34d399" stopOpacity={0}/></linearGradient>
-              <linearGradient id="gap" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.45}/><stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/></linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.14)" />
-            <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-            <YAxis stroke="#94a3b8" fontSize={11} />
-            <Tooltip contentStyle={{ background: '#020617', border: '1px solid rgba(148,163,184,.25)', borderRadius: 16 }} />
-            <Area type="monotone" dataKey="novelty" stroke="#22d3ee" fill="url(#novelty)" strokeWidth={3} />
-            <Area type="monotone" dataKey="trust" stroke="#34d399" fill="url(#trust)" strokeWidth={3} />
-            <Area type="monotone" dataKey="gap" stroke="#f59e0b" fill="url(#gap)" strokeWidth={3} />
-          </AreaChart>
-        </ResponsiveContainer>
       </div>
     </section>
   );
@@ -572,45 +1081,77 @@ function EngineTrend({ timelineData }: { timelineData: Array<Record<string, numb
 
 function TopicExplorer({ topics, ranked, setSelectedId, setActiveView }: any) {
   return (
-    <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-      <Panel eyebrow="topic explorer" title="Research terrain by monitored theme" icon={Telescope}>
-        <div className="space-y-3">
-          {topics.map((topic: any) => (
-            <div key={topic.topic} className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex items-center justify-between gap-3">
+    <section className="grid gap-10 xl:grid-cols-[0.85fr_1.15fr]">
+      <div>
+        <SectionHeader numeral="§ II" eyebrow="Terrain" title="Research by monitored theme" />
+        <Explainer label="How to Read the Terrain">
+          Items are grouped by topic. Each card shows the average PRISM score, trust level, and
+          adoption gap for that theme. Use this view to identify which research areas are producing
+          the most actionable intelligence right now.
+        </Explainer>
+        <div className="surface">
+          {topics.map((topic: any, idx: number) => (
+            <motion.div
+              key={topic.topic}
+              className="border-b border-rule p-5 last:border-b-0"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.55, delay: idx * 0.05, ease: [0.2, 0.7, 0.2, 1] }}
+            >
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-black text-white">{topic.topic}</h3>
-                  <p className="text-sm text-slate-400">{topic.count} signals captured</p>
+                  <span className="font-mono text-[9px] tracking-[0.32em] text-bone-mute">
+                    {(idx + 1).toString().padStart(2, '0')} ·
+                  </span>
+                  <h3 className="font-display text-2xl text-bone tracking-tightest">{topic.topic}</h3>
+                  <p className="font-body italic text-sm text-bone-mute">
+                    {topic.count} signals captured
+                  </p>
                 </div>
-                <span className="text-2xl font-black text-cyan-200">{topic.score}</span>
+                <span className="numeral text-5xl text-chartreuse" style={{ lineHeight: 0.9 }}>
+                  {topic.score}
+                </span>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold text-slate-300">
+              <div className="mt-4 grid grid-cols-3 gap-px bg-rule">
                 <Metric label="trust" value={topic.trust} />
                 <Metric label="gap" value={topic.gap} />
                 <Metric label="priority" value={topic.score} />
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </Panel>
-      <Panel eyebrow="evidence-first queue" title="Top signals inside the topic map" icon={Sparkles}>
-        <div className="grid gap-3 md:grid-cols-2">
-          {ranked.map(({ item, report }: any) => (
-            <button
+      </div>
+      <div>
+        <SectionHeader numeral="§ III" eyebrow="Evidence-First Queue" title="Top signals inside the map" />
+        <Explainer label="Click to Drill In">
+          The highest-priority papers across all topics. Click any card to jump back to the Front
+          Page for a full breakdown of that paper's scores, verdict, and supporting evidence.
+        </Explainer>
+        <div className="grid gap-px bg-rule md:grid-cols-2">
+          {ranked.map(({ item, report }: any, idx: number) => (
+            <motion.button
               key={item.id}
               onClick={() => {
                 setSelectedId(item.id);
                 setActiveView('command');
               }}
-              className="rounded-3xl border border-white/10 bg-slate-950/50 p-4 text-left transition hover:border-cyan-300/50 hover:bg-cyan-300/10"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: idx * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
+              whileHover={{ y: -2 }}
+              className="bg-ink-deep p-5 text-left hover:bg-ink-soft transition-colors"
             >
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">{item.topic}</p>
-              <h3 className="mt-2 line-clamp-2 text-base font-black text-white">{item.title}</h3>
-              <p className="mt-3 text-sm text-slate-400">{report?.evidence?.[0] ?? 'Fallback evidence available.'}</p>
-            </button>
+              <span className="eyebrow eyebrow-accent">{item.topic}</span>
+              <h3 className="font-display mt-2 text-xl text-bone leading-snug">{item.title}</h3>
+              <p className="font-body mt-3 text-sm italic text-bone-warm">
+                {report?.evidence?.[0] ?? 'Fallback evidence available.'}
+              </p>
+            </motion.button>
           ))}
         </div>
-      </Panel>
+      </div>
     </section>
   );
 }
@@ -621,24 +1162,43 @@ function ContradictionBattle({ ranked }: any) {
     .slice(0, 6);
 
   return (
-    <Panel eyebrow="contradiction battle" title="Where claims are most contested" icon={Swords}>
-      <div className="grid gap-4 lg:grid-cols-2">
+    <section>
+      <SectionHeader numeral="§ III" eyebrow="Discord" title="Where claims are most contested" />
+      <Explainer label="What 'Debate' Means" tone="blood">
+        The Debate engine surfaces papers whose claims are actively challenged — through replication
+        failures, adversarial counter-results, or disputed benchmarks. Higher numbers mean less
+        consensus. Use this view to spot fragile findings before they collapse.
+      </Explainer>
+      <div className="grid gap-6 lg:grid-cols-2">
         {contenders.map(({ item, report }: any, index: number) => (
-          <div key={item.id} className="rounded-3xl border border-rose-300/20 bg-rose-300/[0.05] p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="rounded-full bg-rose-300/10 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-rose-200">claim {index + 1}</span>
-              <span className="text-2xl font-black text-rose-200">{Math.round((report?.controversy_score ?? 0) * 100)}</span>
+          <motion.article
+            key={item.id}
+            className="surface p-6 border-l-4 border-l-oxblood"
+            initial={{ opacity: 0, y: 32, rotateX: -6 }}
+            whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.6, delay: index * 0.07, ease: [0.2, 0.7, 0.2, 1] }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="chip chip-blood">Claim {(index + 1).toString().padStart(2, '0')}</span>
+              <span className="numeral text-4xl text-oxblood-glow" style={{ lineHeight: 1 }}>
+                {Math.round((report?.controversy_score ?? 0) * 100)}
+              </span>
             </div>
-            <h3 className="text-xl font-black text-white">{item.title}</h3>
-            <p className="mt-3 text-sm leading-6 text-slate-300">{item.abstract}</p>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">debate evidence</p>
-              <p className="mt-2 text-sm text-slate-300">{report?.evidence?.find((entry: string) => entry.toLowerCase().includes('debate')) ?? report?.evidence?.[0] ?? 'No contradiction evidence returned yet.'}</p>
+            <h3 className="font-display text-2xl text-bone tracking-tightest leading-snug">{item.title}</h3>
+            <p className="body-serif mt-3">{item.abstract}</p>
+            <div className="mt-4 surface-inset p-4">
+              <p className="eyebrow eyebrow-blood mb-2">Debate Evidence</p>
+              <p className="font-body italic text-sm text-bone-warm">
+                {report?.evidence?.find((entry: string) => entry.toLowerCase().includes('debate'))
+                  ?? report?.evidence?.[0]
+                  ?? 'No contradiction evidence printed yet.'}
+              </p>
             </div>
-          </div>
+          </motion.article>
         ))}
       </div>
-    </Panel>
+    </section>
   );
 }
 
@@ -652,35 +1212,52 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
   }));
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-      <Panel eyebrow="adoption gap atlas" title="High-trust research that industry has not absorbed" icon={Layers3}>
-        <div className="h-[28rem]">
+    <section className="grid gap-10 xl:grid-cols-[1.1fr_0.9fr]">
+      <div>
+        <SectionHeader numeral="§ IV" eyebrow="Adoption Gap Atlas" title="Trusted, but unabsorbed by industry" />
+        <Explainer label="Reading the Scatter">
+          A scatter plot of <span className="text-bone not-italic">Trust</span> (X-axis: how
+          reproducible the research is) against <span className="text-bone not-italic">Adoption Gap</span>{' '}
+          (Y-axis: how far ahead academia sits versus industry). Each dot is a paper. The quadrant
+          guide below explains how to read each region.
+        </Explainer>
+        <div className="surface p-5 h-[28rem]">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" />
-              <XAxis dataKey="x" name="trust" stroke="#94a3b8" fontSize={11} />
-              <YAxis dataKey="y" name="gap" stroke="#94a3b8" fontSize={11} />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ background: '#020617', border: '1px solid rgba(148,163,184,.25)', borderRadius: 16 }} />
-              <Scatter data={scatter} fill="#22d3ee" />
+              <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
+              <XAxis dataKey="x" name="trust" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <YAxis dataKey="y" name="gap"   stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <Tooltip cursor={{ strokeDasharray: '3 3', stroke: '#A8A092' }} contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+              <Scatter data={scatter} fill="#D6FF3D" />
             </ScatterChart>
           </ResponsiveContainer>
         </div>
-      </Panel>
-      <Panel eyebrow="gap clusters" title="Topic pressure summary" icon={AlertTriangle}>
-        <div className="space-y-3">
+        <QuadrantGuide />
+      </div>
+      <div>
+        <SectionHeader numeral="§ V" eyebrow="Cluster Pressure" title="Topic gap summary" />
+        <Explainer label="Where to Build">
+          Average adoption gap per research topic. Longer bars mean academia is further ahead of
+          industry in that area. Topics scoring above 60 are strong candidates for new products,
+          tools, or services that bridge the research-to-market divide.
+        </Explainer>
+        <div className="surface">
           {topics.map((topic: any) => (
-            <div key={topic.topic} className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex justify-between gap-3">
-                <span className="font-black text-white">{topic.topic}</span>
-                <span className="font-black text-amber-200">{topic.gap}</span>
+            <div key={topic.topic} className="border-b border-rule p-5 last:border-b-0">
+              <div className="flex justify-between gap-3 items-baseline">
+                <span className="font-display text-xl text-bone tracking-tightest">{topic.topic}</span>
+                <span className="numeral text-3xl text-oxblood-glow" style={{ lineHeight: 1 }}>{topic.gap}</span>
               </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-800">
-                <div className="h-2 rounded-full bg-gradient-to-r from-amber-300 to-fuchsia-400" style={{ width: `${topic.gap}%` }} />
+              <div className="mt-3 h-px bg-rule">
+                <div className="h-px bg-oxblood-glow" style={{ width: `${topic.gap}%` }} />
+              </div>
+              <div className="mt-2 flex justify-between font-mono text-[9px] tracking-[0.22em] text-bone-mute uppercase">
+                <span>quiet</span><span>industry-lag index</span><span>critical</span>
               </div>
             </div>
           ))}
         </div>
-      </Panel>
+      </div>
     </section>
   );
 }
@@ -693,35 +1270,58 @@ function CrossDomainRadar({ ranked }: any) {
   }));
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      <Panel eyebrow="cross-domain radar" title="Transfer paths with strategic upside" icon={RadarIcon}>
-        <div className="h-[30rem]">
+    <section className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr]">
+      <div>
+        <SectionHeader numeral="§ V" eyebrow="Transfer" title="Cross-domain paths" />
+        <Explainer label="Reading the Radar">
+          <p>
+            <span className="text-chartreuse not-italic">Chartreuse (Transferability)</span> — how
+            applicable is this research to other fields? Techniques like graph neural networks or
+            diffusion models may solve problems in biology, finance, or robotics.
+          </p>
+          <p>
+            <span className="text-oxblood-glow not-italic">Oxblood (Novelty)</span> — how new and
+            unique is this research? High novelty combined with high transfer creates the most
+            valuable cross-pollination opportunities: novel methods applied to unexpected fields.
+          </p>
+        </Explainer>
+        <div className="surface p-5 h-[30rem]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData}>
-              <PolarGrid stroke="rgba(148,163,184,0.22)" />
-              <PolarAngleAxis dataKey="topic" stroke="#cbd5e1" fontSize={11} />
-              <Radar name="transfer" dataKey="transfer" stroke="#a78bfa" fill="#a78bfa" fillOpacity={0.28} />
-              <Radar name="novelty" dataKey="novelty" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.18} />
-              <Tooltip contentStyle={{ background: '#020617', border: '1px solid rgba(148,163,184,.25)', borderRadius: 16 }} />
+              <PolarGrid stroke="rgba(237,230,211,0.12)" />
+              <PolarAngleAxis dataKey="topic" stroke="#EDE6D3" fontSize={10} />
+              <Radar name="transfer" dataKey="transfer" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.32} />
+              <Radar name="novelty"  dataKey="novelty"  stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.18} />
+              <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
-      </Panel>
-      <Panel eyebrow="transfer evidence" title="Cross-domain candidates" icon={GitBranch}>
-        <div className="space-y-3">
+      </div>
+      <div>
+        <SectionHeader numeral="§ VI" eyebrow="Transfer Evidence" title="Cross-domain candidates" />
+        <Explainer label="What These Candidates Are">
+          Papers where the Cross-Domain Engine detected a plausible transfer path — for example, a
+          drug-discovery technique that could work for materials science, or an NLP method
+          applicable to code generation.
+        </Explainer>
+        <div className="space-y-px bg-rule">
           {ranked
             .filter(({ report }: any) => (report?.transferability_score ?? 0) > 0.35)
             .map(({ item, report }: any) => (
-              <div key={item.id} className="rounded-3xl border border-violet-300/20 bg-violet-300/[0.05] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-black text-white">{item.title}</h3>
-                  <span className="text-xl font-black text-violet-200">{Math.round((report?.transferability_score ?? 0) * 100)}</span>
+              <div key={item.id} className="bg-ink-deep p-5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="font-display text-xl text-bone tracking-tightest">{item.title}</h3>
+                  <span className="numeral text-3xl text-chartreuse" style={{ lineHeight: 1 }}>
+                    {Math.round((report?.transferability_score ?? 0) * 100)}
+                  </span>
                 </div>
-                <p className="mt-2 text-sm text-slate-300">{report?.evidence?.find((entry: string) => entry.toLowerCase().includes('cross')) ?? report?.verdict}</p>
+                <p className="font-body mt-2 text-sm italic text-bone-warm">
+                  {report?.evidence?.find((entry: string) => entry.toLowerCase().includes('cross')) ?? report?.verdict}
+                </p>
               </div>
             ))}
         </div>
-      </Panel>
+      </div>
     </section>
   );
 }
@@ -740,55 +1340,87 @@ function EngineHistoryChart({ history, selectedTitle }: { history: EngineRun[]; 
     }));
 
   return (
-    <Panel eyebrow="engine history" title={selectedTitle} icon={TrendingUp}>
-      <div className="h-[30rem]">
+    <section>
+      <SectionHeader numeral="§ VI" eyebrow="Chronicle" title={selectedTitle} />
+      <Explainer label="Reading the Chronicle">
+        <p>
+          Each point (R1, R2, R3…) represents a separate analysis run for this paper.
+        </p>
+        <p>
+          <span className="text-chartreuse not-italic">Rising Signal</span> — more stars, downloads,
+          or social mentions over time; growing community interest.
+          {' · '}
+          <span className="text-bone not-italic">Rising Trust</span> — new code, datasets, or
+          benchmarks have appeared; the research is becoming more reproducible.
+          {' · '}
+          <span className="text-oxblood-glow not-italic">Rising Debate</span> — more conflicting
+          papers; claims are becoming more contested.
+        </p>
+      </Explainer>
+      <div className="surface p-5 h-[30rem]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.14)" />
-            <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
-            <YAxis stroke="#94a3b8" fontSize={11} />
-            <Tooltip contentStyle={{ background: '#020617', border: '1px solid rgba(148,163,184,.25)', borderRadius: 16 }} />
-            <Area type="monotone" dataKey="signal" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.12} strokeWidth={3} />
-            <Area type="monotone" dataKey="trust" stroke="#34d399" fill="#34d399" fillOpacity={0.1} strokeWidth={3} />
-            <Area type="monotone" dataKey="debate" stroke="#fb7185" fill="#fb7185" fillOpacity={0.1} strokeWidth={3} />
-            <Area type="monotone" dataKey="gap" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.1} strokeWidth={3} />
-            <Area type="monotone" dataKey="cross" stroke="#a78bfa" fill="#a78bfa" fillOpacity={0.1} strokeWidth={3} />
+            <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
+            <XAxis dataKey="name" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+            <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+            <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+            <Area type="monotone" dataKey="signal" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.12} strokeWidth={2} />
+            <Area type="monotone" dataKey="trust"  stroke="#EDE6D3" fill="#EDE6D3" fillOpacity={0.08} strokeWidth={2} />
+            <Area type="monotone" dataKey="debate" stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.12} strokeWidth={2} />
+            <Area type="monotone" dataKey="gap"    stroke="#7B1E1E" fill="#7B1E1E" fillOpacity={0.1}  strokeWidth={2} />
+            <Area type="monotone" dataKey="cross"  stroke="#3E5C5A" fill="#3E5C5A" fillOpacity={0.1}  strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-4 text-sm text-slate-400">Falls back to demo history when `/api/analysis/engine-runs/{'{item_id}'}` is unavailable.</p>
-    </Panel>
+      <p className="font-body mt-4 text-sm italic text-bone-mute">
+        Falls back to the demo chronicle when <code className="font-mono text-bone-dim">/api/analysis/engine-runs/{'{item_id}'}</code> is silent.
+      </p>
+    </section>
   );
 }
 
 function AlertCenter({ alerts }: { alerts: AgentAlertsResponse }) {
   const rows = alerts.decisions.length > 0 ? alerts.decisions : alerts.alerts;
   return (
-    <Panel eyebrow="alert center" title="OpenClaw-style routing decisions" icon={Bell}>
-      <div className="mb-5 grid gap-3 md:grid-cols-3">
+    <section>
+      <SectionHeader numeral="§ VII" eyebrow="Dispatch" title="OpenClaw routing decisions" />
+      <ActionRubric />
+      <div className="mb-6 grid gap-px bg-rule md:grid-cols-3">
         <Metric label="alerts" value={alerts.alerts.length} />
         <Metric label="decisions" value={alerts.decisions.length} />
         <Metric label="deliveries" value={alerts.deliveries.length} />
       </div>
-      <div className="space-y-3">
+      <div className="space-y-px bg-rule">
         {rows.map((decision, index) => (
-          <div key={`${decision.signal.item_id}-${index}`} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <motion.article
+            key={`${decision.signal.item_id}-${index}`}
+            className="bg-ink-deep p-6"
+            initial={{ opacity: 0, x: -24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.55, delay: index * 0.06, ease: [0.2, 0.7, 0.2, 1] }}
+          >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <span className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em] ${decision.route === 'alert' ? 'bg-rose-300/15 text-rose-200' : 'bg-cyan-300/10 text-cyan-200'}`}>
+              <span className={decision.route === 'alert' ? 'chip chip-blood' : 'chip chip-chart'}>
                 {decision.route.replace('_', ' ')}
               </span>
-              <span className="text-xs font-bold text-slate-400">{decision.reason.replace(/_/g, ' ')}</span>
+              <span className="font-mono text-[10px] tracking-[0.22em] text-bone-mute uppercase">
+                <AlertTriangle size={10} className="inline mr-1" /> {decision.reason.replace(/_/g, ' ')}
+              </span>
             </div>
-            <h3 className="text-xl font-black text-white">{decision.signal.title}</h3>
-            <p className="mt-2 text-sm text-slate-300">{decision.signal.verdict}</p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-              <span className="rounded-full bg-slate-900 px-2 py-1">{decision.signal.topic}</span>
-              <span className="rounded-full bg-slate-900 px-2 py-1">{Math.round(decision.signal.prism_score * 100)} priority</span>
+            <h3 className="font-display text-2xl text-bone tracking-tightest leading-snug">{decision.signal.title}</h3>
+            <p className="body-serif mt-2">{decision.signal.verdict}</p>
+            <div className="mt-4 flex flex-wrap gap-4 font-mono text-[10px] tracking-[0.22em] text-bone-mute uppercase">
+              <span>{decision.signal.topic}</span>
+              <span>·</span>
+              <span className="text-chartreuse">
+                {Math.round(decision.signal.prism_score * 100)} priority
+              </span>
             </div>
-          </div>
+          </motion.article>
         ))}
       </div>
-    </Panel>
+    </section>
   );
 }
 
@@ -810,26 +1442,33 @@ function MemoryPalette({
   setActiveView: (view: ViewKey) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-start bg-slate-950/80 px-4 py-20 backdrop-blur-xl md:place-items-center md:py-0">
-      <div className="w-full max-w-3xl overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-slate-950 shadow-prism">
-        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-          <Search className="text-cyan-300" size={20} />
+    <div className="fixed inset-0 z-50 grid place-items-start bg-ink-deep/85 px-4 py-20 backdrop-blur-md md:place-items-center md:py-0">
+      <div className="w-full max-w-3xl bg-ink border border-bone-dim shadow-editorial">
+        <div className="flex items-center justify-between border-b border-bone-dim px-5 py-3">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] tracking-[0.32em] text-chartreuse">— ARCHIVE —</span>
+          </div>
+          <button onClick={close} className="text-bone-dim hover:text-chartreuse transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex items-center gap-3 border-b border-rule px-5 py-4">
+          <Search className="text-chartreuse" size={16} />
           <input
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') searchMemory(query);
-            }}
-            className="flex-1 bg-transparent text-lg font-bold text-white outline-none placeholder:text-slate-500"
-            placeholder="Search PRISM memory..."
+            onKeyDown={(event) => { if (event.key === 'Enter') searchMemory(query); }}
+            className="font-display flex-1 bg-transparent text-2xl italic text-bone outline-none placeholder:text-bone-mute"
+            placeholder="search prism memory..."
           />
-          <button onClick={close} className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/10">
-            <X size={18} />
-          </button>
         </div>
-        <div className="max-h-[28rem] overflow-y-auto p-4">
-          {results.map((result) => (
+        <p className="font-body border-b border-rule px-5 py-3 text-[12px] italic text-bone-mute leading-relaxed">
+          Semantic search over all historical research data PRISM has ingested. Press{' '}
+          <kbd className="font-mono not-italic text-bone-dim">Enter</kbd> to query.
+        </p>
+        <div className="max-h-[28rem] overflow-y-auto">
+          {results.map((result, index) => (
             <button
               key={result.item_id}
               onClick={() => {
@@ -837,13 +1476,22 @@ function MemoryPalette({
                 setActiveView('command');
                 close();
               }}
-              className="mb-3 w-full rounded-3xl border border-white/10 bg-white/[0.03] p-4 text-left hover:border-cyan-300/50 hover:bg-cyan-300/10"
+              className="w-full border-b border-rule px-5 py-4 text-left hover:bg-ink-soft transition-colors last:border-b-0"
             >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-black text-white">{result.title}</h3>
-                <span className="font-black text-cyan-200">{Math.round(result.score * 100)}</span>
+              <div className="flex items-start gap-4">
+                <span className="numeral text-2xl text-bone-mute" style={{ lineHeight: 1 }}>
+                  {(index + 1).toString().padStart(2, '0')}
+                </span>
+                <div className="flex-1">
+                  <h3 className="font-display text-lg text-bone tracking-tightest">{result.title}</h3>
+                  <p className="font-mono mt-1 text-[10px] tracking-[0.2em] text-bone-mute uppercase">
+                    {result.topic} / {result.matched_terms.join(' · ')}
+                  </p>
+                </div>
+                <span className="numeral text-3xl text-chartreuse" style={{ lineHeight: 1 }}>
+                  {Math.round(result.score * 100)}
+                </span>
               </div>
-              <p className="mt-2 text-sm text-slate-400">{result.topic} / {result.matched_terms.join(', ')}</p>
             </button>
           ))}
         </div>
@@ -852,38 +1500,49 @@ function MemoryPalette({
   );
 }
 
-function Panel({ eyebrow, title, icon: Icon, children }: { eyebrow: string; title: string; icon: typeof Activity; children: React.ReactNode }) {
-  return (
-    <section className="glass rounded-[2rem] p-6">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-2xl bg-cyan-300/10 p-2 text-cyan-200">
-          <Icon size={20} />
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">{eyebrow}</p>
-          <h2 className="mt-1 text-2xl font-black text-white">{title}</h2>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-black text-white">{value}</p>
+    <div className="bg-ink-deep p-4">
+      <p className="font-mono text-[9px] tracking-[0.32em] text-bone-mute uppercase">{label}</p>
+      <p className="numeral mt-2 text-3xl text-bone" style={{ lineHeight: 1 }}>{value}</p>
     </div>
   );
 }
 
-function Footer() {
+function Colophon() {
   return (
-    <footer className="mt-10 grid gap-4 rounded-[2rem] border border-white/10 bg-slate-950/50 p-5 text-sm text-slate-400 md:grid-cols-3">
-      <div className="flex items-center gap-3"><Sparkles className="text-cyan-300" /> Early detection tells you what is about to matter.</div>
-      <div className="flex items-center gap-3"><Atom className="text-violet-300" /> Fusion reasoning turns fragmented signals into decisions.</div>
-      <div className="flex items-center gap-3"><GitBranch className="text-emerald-300" /> Modular engines make PRISM easy to extend.</div>
+    <footer className="mt-16">
+      <div className="rule-double" />
+      <div className="grid gap-6 py-8 md:grid-cols-3">
+        <div>
+          <p className="eyebrow eyebrow-accent mb-2">§ Manifesto</p>
+          <p className="font-body italic text-sm text-bone-warm leading-snug">
+            <Sparkles size={12} className="inline text-chartreuse mr-1" />
+            Early detection tells you what is about to matter — long before
+            consensus calcifies it.
+          </p>
+        </div>
+        <div>
+          <p className="eyebrow eyebrow-blood mb-2">§ Method</p>
+          <p className="font-body italic text-sm text-bone-warm leading-snug">
+            <BrainCircuit size={12} className="inline text-oxblood-glow mr-1" />
+            Fusion reasoning turns fragmented signals into decisions, every
+            verdict traceable to its evidence.
+          </p>
+        </div>
+        <div>
+          <p className="eyebrow mb-2">§ Colophon</p>
+          <p className="font-body italic text-sm text-bone-warm leading-snug">
+            <GitBranch size={12} className="inline text-bone-dim mr-1" />
+            Set in Fraunces & Newsreader. Engines modular, palette deliberate,
+            grid intentionally broken.
+          </p>
+        </div>
+      </div>
+      <div className="rule-double" />
+      <p className="font-mono text-center text-[10px] tracking-[0.32em] text-bone-mute py-6 uppercase">
+        — End of Edition · PRISM Gazette · Press Cmd/Ctrl-K to open the Archive —
+      </p>
     </footer>
   );
 }

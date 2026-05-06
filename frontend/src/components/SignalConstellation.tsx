@@ -1,35 +1,66 @@
-import { GitBranch, Newspaper, RadioTower, ScrollText, Server, Users } from 'lucide-react';
+import { BookOpen, Code, Cpu, GitBranch, Globe, Newspaper, RadioTower, Rocket, ScrollText, Search, Server, Users } from 'lucide-react';
 import type { ResearchItem } from '../api/client';
 
-const icons = {
+const icons: Record<string, typeof Globe> = {
   arxiv: ScrollText,
   github: GitBranch,
   huggingface: Server,
   news: Newspaper,
   mock_social: RadioTower,
   mock_jobs: Users,
+  semantic_scholar: BookOpen,
+  crossref: Globe,
+  papers_with_code: Code,
+  engineering_blog: Cpu,
+  mock_product_launch: Rocket,
 };
 
 export function SignalConstellation({ items }: { items: ResearchItem[] }) {
   const sources = Array.from(new Set(items.map((item) => item.source)));
+  const total = items.length;
   return (
-    <section className="glass relative min-h-[300px] overflow-hidden rounded-[2rem] p-6">
-      <div className="absolute inset-0 prism-grid opacity-40" />
-      <div className="relative z-10 mb-6">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-cyan-300">source constellation</p>
-        <h2 className="mt-2 text-2xl font-black text-white">Live signal map</h2>
+    <section className="surface relative overflow-hidden p-6">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <p className="eyebrow eyebrow-accent">§ III · Source Constellation</p>
+          <h2 className="font-display mt-2 text-3xl tracking-tightest text-bone">
+            Live signal map
+          </h2>
+        </div>
+        <span className="numeral text-5xl text-bone-dim">{total}</span>
       </div>
-      <div className="relative z-10 grid grid-cols-2 gap-4 md:grid-cols-3">
+      <p className="font-body mt-3 text-[13px] italic text-bone-mute leading-relaxed max-w-2xl">
+        Each tile represents a monitored data source. Wider coverage across sources means better
+        intelligence — the more channels PRISM listens to, the harder it is for an emerging signal
+        to slip past unnoticed.
+      </p>
+      <div className="rule-ticker my-5" />
+      <div className="grid grid-cols-2 gap-px bg-rule md:grid-cols-3">
         {sources.map((source, index) => {
-          const Icon = icons[source];
+          const Icon = icons[source] ?? Search;
           const count = items.filter((item) => item.source === source).length;
+          const pct = Math.round((count / total) * 100);
           return (
-            <div key={source} className="rounded-3xl border border-white/10 bg-slate-950/60 p-4" style={{ transform: `translateY(${index % 2 === 0 ? 0 : 18}px)` }}>
-              <div className="mb-4 inline-flex rounded-2xl bg-cyan-400/10 p-3 text-cyan-200">
-                <Icon size={20} />
+            <div
+              key={source}
+              className="bg-ink-deep p-4 reveal"
+              style={{ animationDelay: `${0.1 + index * 0.08}s` }}
+            >
+              <div className="flex items-center justify-between">
+                <Icon size={16} strokeWidth={1.4} className="text-bone-dim" />
+                <span className="font-mono text-[9px] tracking-[0.22em] text-bone-mute">
+                  {pct}%
+                </span>
               </div>
-              <div className="text-2xl font-black text-white">{count}</div>
-              <div className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">{source.replace('_', ' ')}</div>
+              <div className="numeral mt-3 text-4xl text-bone" style={{ lineHeight: 1 }}>
+                {count.toString().padStart(2, '0')}
+              </div>
+              <div className="font-mono mt-2 text-[10px] uppercase tracking-[0.2em] text-bone-dim">
+                {source.replace('_', ' ')}
+              </div>
+              <div className="mt-3 h-px bg-rule">
+                <div className="h-px bg-chartreuse" style={{ width: `${pct}%` }} />
+              </div>
             </div>
           );
         })}

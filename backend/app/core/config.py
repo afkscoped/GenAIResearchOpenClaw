@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     crossref_mailto: str | None = None
     enable_llm: bool = False
     llm_api_key: str | None = None
+    llm_model: str = "llama-3.3-70b-versatile"
+    llm_base_url: str = "https://api.groq.com/openai/v1"
     enable_scheduler: bool = False
     prism_heartbeat_hours: int = 6
     prism_agent_query: str = "multimodal agents"

@@ -98,7 +98,7 @@ def run_and_persist_engines(
     )
     related_items, links = _related_context(db, item)
 
-    # --- run individual engines --------------------------------------------
+    # --- run individual engines (once only) ---------------------------------
     signal_result = SignalEngine().score(item, signals)
     trust_result = TrustEngine().score(item, signals)
     debate_result = DebateEngine().score(item, related_items, links)
@@ -132,28 +132,83 @@ def run_and_persist_engines(
     db.add(engine_run)
     db.flush()  # populate engine_run.id before creating FusionReportRecord
 
-    # --- build fusion scores (same formula as FusionEngine.analyze) --------
-    fusion_report_read = FusionEngine().analyze(
-        item=item,
-        signals=signals,
-        related_items=related_items,
-        links=links,
+    # --- compute heuristic fusion scores inline -----------------------------
+    from app.engines.schemas import clamp
+
+    heuristic_prism = clamp(
+        0.25 * signal_result.score
+        + 0.25 * trust_result.score
+        + 0.15 * (1 - debate_result.score)
+        + 0.20 * gap_result.score
+        + 0.15 * cross_domain_result.score
     )
+
+    # Build heuristic evidence
+    evidence = [
+        f"Signal Engine: {signal_result.verdict}",
+        f"Trust Engine: {trust_result.verdict}",
+        f"Debate Engine: {debate_result.verdict}",
+        f"Gap Engine: {gap_result.verdict}",
+        f"Cross-Domain Engine: {cross_domain_result.verdict}",
+    ]
+    for r in [signal_result, trust_result, debate_result, gap_result, cross_domain_result]:
+        evidence.extend(r.evidence[:3])
+    evidence = evidence[:17]
+
+    # --- Call OpenClaw Agent Service ----------------------------------------
+    from app.agent.openclaw_client import analyze as openclaw_analyze
+
+    openclaw_result = openclaw_analyze(
+        title=item.title or "",
+        abstract=item.abstract or "",
+        scores={
+            "trust": trust_result.score,
+            "novelty": signal_result.score,
+            "gap": gap_result.score,
+            "cross_domain": cross_domain_result.score,
+            "controversy": debate_result.score,
+        },
+    )
+
+    # Use OpenClaw's refined score and verdict
+    prism_score = openclaw_result.prism_score
+    verdict = openclaw_result.verdict
+
+    # Append reasoning and action to evidence
+    if openclaw_result.reasoning:
+        evidence.append(f"[OpenClaw Reasoning] {openclaw_result.reasoning}")
+    evidence.append(f"[OpenClaw Action] {openclaw_result.action}")
+    evidence.append(f"[Analysis Source] {openclaw_result.source}")
 
     # --- persist FusionReportRecord ----------------------------------------
     fusion_record = FusionReportRecord(
         item_id=item.id,
         engine_run_id=engine_run.id,
-        prism_score=fusion_report_read.prism_score,
-        novelty_score=fusion_report_read.novelty_score,
-        trust_score=fusion_report_read.trust_score,
-        controversy_score=fusion_report_read.controversy_score,
-        adoption_gap_score=fusion_report_read.adoption_gap_score,
-        transferability_score=fusion_report_read.transferability_score,
-        verdict=fusion_report_read.verdict,
-        evidence=fusion_report_read.evidence,
+        prism_score=round(prism_score, 4),
+        novelty_score=signal_result.score,
+        trust_score=trust_result.score,
+        controversy_score=debate_result.score,
+        adoption_gap_score=gap_result.score,
+        transferability_score=cross_domain_result.score,
+        verdict=verdict,
+        evidence=evidence,
     )
     db.add(fusion_record)
     # caller commits
 
     return engine_run, fusion_record
+
+
+def _heuristic_verdict(prism_score, signal, trust, debate, gap, cross_domain):
+    """Pure heuristic verdict — no LLM, no network."""
+    if prism_score >= 0.72 and trust.score >= 0.55:
+        return "High-priority PRISM opportunity: strong signal, usable trust evidence, and clear strategic value."
+    if debate.score >= 0.7:
+        return "Contested opportunity: valuable to track, but claims require careful validation."
+    if gap.score >= 0.7:
+        return "Adoption-gap opportunity: academia appears ahead of industry implementation."
+    if cross_domain.score >= 0.7:
+        return "Cross-domain spark: promising transfer path detected."
+    if prism_score >= 0.45:
+        return "Watchlist candidate: enough signal to monitor in the next research brief."
+    return "Low-priority item for now: keep in memory but do not escalate."
