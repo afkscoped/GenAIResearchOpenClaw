@@ -39,3 +39,4 @@ class SignalEngine:
             verdict = "Weak early signal; keep as background context."
 
         return EngineResult(score=round(score, 4), verdict=verdict, evidence=evidence, details=totals)
+

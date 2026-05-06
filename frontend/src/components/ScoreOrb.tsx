@@ -5,29 +5,74 @@ type ScoreOrbProps = {
   size?: 'sm' | 'lg';
 };
 
-const tones = {
-  cyan: 'from-cyan-300 via-sky-500 to-blue-600 text-cyan-100',
-  violet: 'from-violet-300 via-fuchsia-500 to-purple-700 text-violet-100',
-  rose: 'from-rose-300 via-pink-500 to-red-600 text-rose-100',
-  amber: 'from-amber-200 via-orange-500 to-yellow-600 text-amber-100',
-  emerald: 'from-emerald-200 via-teal-500 to-cyan-600 text-emerald-100',
-};
-
-export function ScoreOrb({ label, score, tone = 'cyan', size = 'sm' }: ScoreOrbProps) {
+export function ScoreOrb({ label, score, size = 'sm' }: ScoreOrbProps) {
   const pct = Math.round(score * 100);
-  const dim = size === 'lg' ? 'h-44 w-44' : 'h-24 w-24';
-  const inner = size === 'lg' ? 'h-36 w-36' : 'h-20 w-20';
+  const ringSize = size === 'lg' ? 220 : 110;
+  const stroke = size === 'lg' ? 2 : 1;
+  const radius = ringSize / 2 - 6;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+  const ticks = size === 'lg' ? 60 : 36;
+
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className={`${dim} rounded-full bg-gradient-to-br ${tones[tone]} p-[2px] shadow-prism`}>
-        <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-950/90">
-          <div className={`${inner} flex flex-col items-center justify-center rounded-full border border-white/10 bg-slate-900/90`}>
-            <span className={size === 'lg' ? 'text-4xl font-black' : 'text-2xl font-black'}>{pct}</span>
-            <span className="text-[10px] uppercase tracking-[0.28em] text-slate-400">score</span>
-          </div>
+      <div
+        className="dial spin-in relative grid place-items-center"
+        style={{ width: ringSize, height: ringSize }}
+      >
+        {Array.from({ length: ticks }).map((_, i) => (
+          <span
+            key={i}
+            className="dial-tick"
+            style={{
+              transform: `translateX(-50%) rotate(${(360 / ticks) * i}deg)`,
+              height: i % 5 === 0 ? 10 : 4,
+              opacity: i % 5 === 0 ? 0.9 : 0.35,
+            }}
+          />
+        ))}
+        <svg
+          width={ringSize}
+          height={ringSize}
+          className="absolute inset-0 -rotate-90"
+          aria-hidden
+        >
+          <circle
+            cx={ringSize / 2}
+            cy={ringSize / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(237, 230, 211, 0.08)"
+            strokeWidth={stroke}
+          />
+          <circle
+            cx={ringSize / 2}
+            cy={ringSize / 2}
+            r={radius}
+            fill="none"
+            stroke="#D6FF3D"
+            strokeWidth={stroke + 1}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="butt"
+            style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)' }}
+          />
+        </svg>
+        <div className="relative z-10 flex flex-col items-center">
+          <span
+            className={`numeral text-bone ${size === 'lg' ? 'text-7xl' : 'text-3xl'}`}
+            style={{ lineHeight: 1 }}
+          >
+            {pct}
+          </span>
+          <span className="font-mono mt-1 text-[9px] tracking-[0.32em] text-bone-mute">
+            INDEX / 100
+          </span>
         </div>
       </div>
-      <span className="text-center text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{label}</span>
+      <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-bone-dim">
+        — {label} —
+      </span>
     </div>
   );
 }

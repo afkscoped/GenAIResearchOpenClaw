@@ -1,5 +1,13 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Configure logging to show up in the terminal
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(message)s",
+)
+logger = logging.getLogger("prism")
 
 from app.api.routes_analysis import router as analysis_router
 from app.api.routes_health import router as health_router

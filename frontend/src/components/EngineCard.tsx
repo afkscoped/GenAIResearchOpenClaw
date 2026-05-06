@@ -8,26 +8,43 @@ export type EngineCardProps = {
   gradient: string;
 };
 
-export function EngineCard({ title, subtitle, score, icon: Icon, gradient }: EngineCardProps) {
+export function EngineCard({ title, subtitle, score, icon: Icon }: EngineCardProps) {
   const pct = Math.round(score * 100);
+  const isHot = pct >= 65;
+  const isCool = pct < 35;
   return (
-    <div className="glass group relative overflow-hidden rounded-3xl p-5 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/40">
-      <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${gradient} opacity-20 blur-2xl transition group-hover:opacity-40`} />
-      <div className="relative flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-4 inline-flex rounded-2xl border border-white/10 bg-white/5 p-3 text-cyan-200">
-            <Icon size={20} />
+    <div className="surface group p-5 transition-colors duration-300 hover:border-bone-dim">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="border border-rule p-2 text-bone-dim group-hover:text-chartreuse transition-colors">
+            <Icon size={16} strokeWidth={1.4} />
           </div>
-          <h3 className="text-base font-bold text-white">{title}</h3>
-          <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+          <div>
+            <p className="eyebrow">{title}</p>
+            <p className="font-body mt-1 text-sm italic text-bone-dim">{subtitle}</p>
+          </div>
         </div>
-        <div className="text-right">
-          <div className="text-3xl font-black text-white">{pct}</div>
-          <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500">index</div>
+        <div
+          className={`numeral text-5xl ${isHot ? 'text-chartreuse' : isCool ? 'text-bone-mute' : 'text-bone'}`}
+          style={{ lineHeight: 0.9 }}
+        >
+          {pct}
         </div>
       </div>
-      <div className="relative mt-5 h-2 overflow-hidden rounded-full bg-slate-800">
-        <div className={`h-full rounded-full bg-gradient-to-r ${gradient}`} style={{ width: `${pct}%` }} />
+      <div className="mt-5 relative h-px bg-rule">
+        <div
+          className={`absolute left-0 top-0 h-px ${isHot ? 'bg-chartreuse' : 'bg-bone-dim'}`}
+          style={{ width: `${pct}%`, transition: 'width 1s cubic-bezier(.2,.7,.2,1)' }}
+        />
+        <div
+          className={`absolute -top-[3px] h-[7px] w-[2px] ${isHot ? 'bg-chartreuse' : 'bg-bone'}`}
+          style={{ left: `calc(${pct}% - 1px)`, transition: 'left 1s cubic-bezier(.2,.7,.2,1)' }}
+        />
+      </div>
+      <div className="mt-3 flex justify-between font-mono text-[9px] tracking-[0.22em] text-bone-mute">
+        <span>00</span>
+        <span>{isHot ? '◆ ELEVATED' : isCool ? '○ DORMANT' : '◇ STEADY'}</span>
+        <span>100</span>
       </div>
     </div>
   );

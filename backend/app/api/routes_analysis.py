@@ -52,9 +52,48 @@ def build_fusion_report(db: Session, item: ResearchItem) -> FusionReportRead:
 
 
 @router.get("/fusion-reports", response_model=list[FusionReportRead])
-def list_fusion_reports(limit: int = Query(default=50, ge=1, le=200), db: Session = Depends(get_db)) -> list[FusionReportRead]:
+def list_fusion_reports(limit: int = Query(default=15, ge=1, le=100), db: Session = Depends(get_db)) -> list[FusionReportRead]:
+    """Return fusion reports for the latest items.
+    
+    Uses CACHING: If a report already exists in FusionReportRecord, use it.
+    Otherwise, run the engines once and persist.
+    """
     items = db.query(ResearchItem).order_by(ResearchItem.timestamp.desc()).limit(limit).all()
-    return [build_fusion_report(db, item) for item in items]
+    results = []
+    
+    for item in items:
+        # Check for latest cached report
+        cached = db.query(FusionReportRecord).filter(FusionReportRecord.item_id == item.id).order_by(FusionReportRecord.created_at.desc()).first()
+        
+        if cached:
+            results.append(FusionReportRead(
+                item_id=cached.item_id,
+                prism_score=cached.prism_score,
+                novelty_score=cached.novelty_score,
+                trust_score=cached.trust_score,
+                controversy_score=cached.controversy_score,
+                adoption_gap_score=cached.adoption_gap_score,
+                transferability_score=cached.transferability_score,
+                verdict=cached.verdict,
+                evidence=cached.evidence
+            ))
+        else:
+            # Not cached? Run engines, persist, and return
+            _, fusion_record = run_and_persist_engines(db, item)
+            db.commit()
+            results.append(FusionReportRead(
+                item_id=fusion_record.item_id,
+                prism_score=fusion_record.prism_score,
+                novelty_score=fusion_record.novelty_score,
+                trust_score=fusion_record.trust_score,
+                controversy_score=fusion_record.controversy_score,
+                adoption_gap_score=fusion_record.adoption_gap_score,
+                transferability_score=fusion_record.transferability_score,
+                verdict=fusion_record.verdict,
+                evidence=fusion_record.evidence
+            ))
+            
+    return results
 
 
 @router.get("/fusion-reports/{item_id}", response_model=FusionReportRead)
@@ -62,7 +101,36 @@ def get_fusion_report(item_id: str, db: Session = Depends(get_db)) -> FusionRepo
     item = db.get(ResearchItem, item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="Research item not found")
-    return build_fusion_report(db, item)
+    
+    # Check cache first
+    cached = db.query(FusionReportRecord).filter(FusionReportRecord.item_id == item_id).order_by(FusionReportRecord.created_at.desc()).first()
+    if cached:
+        return FusionReportRead(
+            item_id=cached.item_id,
+            prism_score=cached.prism_score,
+            novelty_score=cached.novelty_score,
+            trust_score=cached.trust_score,
+            controversy_score=cached.controversy_score,
+            adoption_gap_score=cached.adoption_gap_score,
+            transferability_score=cached.transferability_score,
+            verdict=cached.verdict,
+            evidence=cached.evidence
+        )
+    
+    # Not cached — run once and persist
+    _, fusion_record = run_and_persist_engines(db, item)
+    db.commit()
+    return FusionReportRead(
+        item_id=fusion_record.item_id,
+        prism_score=fusion_record.prism_score,
+        novelty_score=fusion_record.novelty_score,
+        trust_score=fusion_record.trust_score,
+        controversy_score=fusion_record.controversy_score,
+        adoption_gap_score=fusion_record.adoption_gap_score,
+        transferability_score=fusion_record.transferability_score,
+        verdict=fusion_record.verdict,
+        evidence=fusion_record.evidence
+    )
 
 
 # ---------------------------------------------------------------------------
