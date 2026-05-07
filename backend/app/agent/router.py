@@ -6,11 +6,16 @@ from typing import Any
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
+from app.agent.langgraph_agent import build_prism_graph
 from app.agent.soul_profile import SoulProfile, get_soul_profile, reload_soul_profile
 from app.agent.state import AgentState
 from app.core.config import get_settings
+from app.db.models import AgentRunRecord
+from app.db.session import get_db
+from app.schemas.agent import AgentResearchRequest, AgentRunRead, AgentRunResponse
 
 logger = logging.getLogger("prism.agent")
 
@@ -172,3 +177,36 @@ def run_once() -> dict[str, Any]:
 @router.get("/alerts")
 def agent_alerts() -> dict[str, Any]:
     return AgentState.alerts_dict()
+
+
+@router.post("/research", response_model=AgentRunResponse)
+def run_agent_research(payload: AgentResearchRequest, db: Session = Depends(get_db)) -> AgentRunResponse:
+    result = build_prism_graph().run(
+        db=db,
+        query=payload.query,
+        user_id=payload.user_id,
+        mode=payload.mode,
+        limit_per_source=payload.limit_per_source,
+        include_demo=payload.include_demo,
+    )
+    AgentState.record_graph_run(
+        {
+            "run_id": result.run_id,
+            "query": result.query,
+            "intent": result.intent,
+            "chroma_available": result.chroma_available,
+            "neo4j_available": result.neo4j_available,
+            "llm_provider": result.provider_used,
+            "timings": result.timings,
+            "errors": result.errors,
+        }
+    )
+    return result
+
+
+@router.get("/runs/{run_id}", response_model=AgentRunRead)
+def read_agent_run(run_id: str, db: Session = Depends(get_db)) -> AgentRunRead:
+    record = db.get(AgentRunRecord, run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Agent run not found")
+    return AgentRunRead.model_validate(record)

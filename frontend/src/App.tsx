@@ -262,16 +262,21 @@ import {
   Download,
   FlaskConical,
   GitBranch,
+  Heart,
   Layers3,
   Loader2,
+  MessageCircle,
   Network,
   Radar as RadarIcon,
   RefreshCw,
   Search,
+  Send,
   ShieldCheck,
   Sparkles,
+  Star,
   Swords,
   Telescope,
+  ThumbsDown,
   TrendingUp,
   X,
   Zap,
@@ -297,6 +302,7 @@ import {
 import {
   api,
   type AgentAlertsResponse,
+  type ChatResponse,
   type EngineRun,
   type FusionReport,
   type ItemDetail,
@@ -318,22 +324,23 @@ import { EngineCard } from './components/EngineCard';
 import { EvidencePanel } from './components/EvidencePanel';
 import { ScoreOrb } from './components/ScoreOrb';
 import { SignalConstellation } from './components/SignalConstellation';
+import { PaperChat } from './components/PaperChat';
 
-type ViewKey = 'command' | 'topics' | 'battle' | 'atlas' | 'radar' | 'history' | 'alerts' | 'openclaw' | 'persona' | 'suggest';
+type ViewKey = 'command' | 'topics' | 'debate' | 'atlas' | 'radar' | 'history' | 'benchmarks' | 'persona' | 'suggest' | 'chat';
 
 const sourceColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#3E5C5A', '#A8A092', '#7B1E1E'];
 
 const views: Array<{ key: ViewKey; label: string; icon: typeof Activity; numeral: string }> = [
   { key: 'command',  label: 'Front Page', icon: Activity,     numeral: 'I' },
   { key: 'topics',   label: 'Terrain',    icon: Telescope,    numeral: 'II' },
-  { key: 'battle',   label: 'Discord',    icon: Swords,       numeral: 'III' },
+  { key: 'debate',   label: 'Debate',     icon: Swords,       numeral: 'III' },
   { key: 'atlas',    label: 'Atlas',      icon: Layers3,      numeral: 'IV' },
   { key: 'radar',    label: 'Transfer',   icon: RadarIcon,    numeral: 'V' },
   { key: 'history',  label: 'Chronicle',  icon: TrendingUp,   numeral: 'VI' },
-  { key: 'alerts',   label: 'Dispatch',   icon: Bell,         numeral: 'VII' },
-  { key: 'openclaw', label: 'OpenClaw',    icon: BrainCircuit, numeral: 'VIII' },
-  { key: 'persona',  label: 'Persona',     icon: ShieldCheck,  numeral: 'IX' },
-  { key: 'suggest',  label: 'Suggest',     icon: Sparkles,     numeral: 'X' },
+  { key: 'benchmarks', label: 'Metrics',   icon: Bell,         numeral: 'VII' },
+  { key: 'persona',  label: 'Persona',     icon: ShieldCheck,  numeral: 'VIII' },
+  { key: 'suggest',  label: 'Suggest',     icon: Sparkles,     numeral: 'IX' },
+  { key: 'chat',     label: 'Ask Papers', icon: MessageCircle, numeral: 'X' },
 ];
 
 function byReport(items: ResearchItem[], reports: FusionReport[]) {
@@ -418,6 +425,8 @@ function App() {
   const [notice, setNotice] = useState('Demo edition · run the backend pipeline to print live PRISM memory.');
   const [query, setQuery] = useState('multimodal agents');
   const [activeView, setActiveView] = useState<ViewKey>('command');
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; citations?: Array<{ item_id: string; title: string; url: string }> }>>([]);
+  const [chatLoading, setChatLoading] = useState(false);
   const [now] = useState(() => new Date());
 
   const ranked = useMemo(() => byReport(items, reports), [items, reports]);
@@ -573,14 +582,14 @@ function App() {
           >
             {activeView === 'command' && <CommandCenter notice={notice} {...shellProps} />}
             {activeView === 'topics' && <TopicExplorer topics={topics} ranked={ranked} setSelectedId={setSelectedId} setActiveView={setActiveView} />}
-            {activeView === 'battle' && <ContradictionBattle ranked={ranked} />}
+            {activeView === 'debate' && <ContradictionBattle ranked={ranked} items={items} />}
             {activeView === 'atlas' && <AdoptionGapAtlas ranked={ranked} topics={topics} />}
             {activeView === 'radar' && <CrossDomainRadar ranked={ranked} />}
             {activeView === 'history' && <EngineHistoryChart history={history} selectedTitle={selected?.item.title ?? 'Selected dispatch'} />}
-            {activeView === 'alerts' && <AlertCenter alerts={alerts} />}
-            {activeView === 'openclaw' && <OpenClawPanel status={openClawStatus} />}
-            {activeView === 'persona' && <PersonaDashboard persona={persona} ranked={ranked} />}
+            {activeView === 'benchmarks' && <BenchmarkLab ranked={ranked} topics={topics} persona={persona} query={query} />}
+            {activeView === 'persona' && <PersonaDashboard persona={persona} ranked={ranked} setPersona={setPersona} />}
             {activeView === 'suggest' && <SuggestionFeed suggestions={suggestions} setSelectedId={setSelectedId} setActiveView={setActiveView} />}
+            {activeView === 'chat' && <PaperChat ranked={ranked} chatMessages={chatMessages} setChatMessages={setChatMessages} chatLoading={chatLoading} setChatLoading={setChatLoading} setSelectedId={setSelectedId} setActiveView={setActiveView} />}
           </motion.div>
         </AnimatePresence>
 
@@ -1047,8 +1056,8 @@ function DetailPanel({ selected, selectedReport }: any) {
             "{selectedReport.verdict}"
           </p>
           <p className="font-body mt-3 text-[13px] italic text-bone-mute leading-relaxed">
-            Generated by the OpenClaw AI agent, which reads the abstract together with all five
-            engine scores to produce a context-aware, actionable assessment.
+            Generated by PRISM's fusion engine. When enabled, Groq refines the reasoning first;
+            local Ollama llama3 is the fallback before the deterministic heuristics take over.
           </p>
         </div>
       </article>
@@ -1214,12 +1223,12 @@ function TopicExplorer({ topics, ranked, setSelectedId, setActiveView }: any) {
 
 function ContradictionBattle({ ranked }: any) {
   const contenders = ranked
-    .filter(({ report }: any) => (report?.controversy_score ?? 0) > 0.2)
-    .slice(0, 6);
+    .filter(({ report }: any) => (report?.controversy_score ?? 0) >= 0.0)
+    .slice(0, 8);
 
   return (
     <section>
-      <SectionHeader numeral="§ III" eyebrow="Discord" title="Where claims are most contested" />
+      <SectionHeader numeral="§ III" eyebrow="Debate" title="Where claims are most contested" />
       <Explainer label="What 'Debate' Means" tone="blood">
         The Debate engine surfaces papers whose claims are actively challenged — through replication
         failures, adversarial counter-results, or disputed benchmarks. Higher numbers mean less
@@ -1435,6 +1444,110 @@ function EngineHistoryChart({ history, selectedTitle }: { history: EngineRun[]; 
   );
 }
 
+function BenchmarkLab({
+  ranked,
+  topics,
+  persona,
+  query,
+}: {
+  ranked: Array<{ item: ResearchItem; report?: FusionReport }>;
+  topics: Array<{ topic: string; count: number; score: number; trust: number; gap: number }>;
+  persona: UserPersona | null;
+  query: string;
+}) {
+  const top = ranked.slice(0, 10);
+  const avg = (field: keyof FusionReport) => {
+    const values = top.map(({ report }) => Number(report?.[field] ?? 0));
+    return values.length ? Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 100) : 0;
+  };
+  const personaTopics = new Set(Object.keys(persona?.liked_topics ?? {}).map((topic) => topic.toLowerCase()));
+  const alignment = top.length
+    ? Math.round((top.filter(({ item }) => personaTopics.has(item.topic.toLowerCase())).length / top.length) * 100)
+    : 0;
+  const benchmarkRows = [
+    { name: 'priority', value: avg('prism_score'), target: 70 },
+    { name: 'trust', value: avg('trust_score'), target: 60 },
+    { name: 'novelty', value: avg('novelty_score'), target: 65 },
+    { name: 'gap', value: avg('adoption_gap_score'), target: 55 },
+    { name: 'transfer', value: avg('transferability_score'), target: 50 },
+    { name: 'persona', value: alignment, target: 40 },
+  ];
+  const driftRows = topics.slice(0, 8).map((topic, index) => ({
+    name: topic.topic.slice(0, 14),
+    interest: Math.max(8, topic.score + index * 2),
+    opportunity: Math.round((topic.gap * 0.55) + (topic.trust * 0.25) + (topic.score * 0.2)),
+  }));
+
+  return (
+    <section className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr]">
+      <div>
+        <SectionHeader numeral="§ VII" eyebrow="Adaptive Metrics" title="Research benchmark lab" />
+        <Explainer label="Dynamic Scoring">
+          These metrics recompute from the current query, top-ranked papers, topic terrain, and
+          learned persona preferences. Run a new query or record feedback and the dashboard shifts
+          with the user's research taste.
+        </Explainer>
+        <div className="grid gap-px bg-rule md:grid-cols-3">
+          <Metric label="query fit" value={avg('prism_score')} />
+          <Metric label="trust avg" value={avg('trust_score')} />
+          <Metric label="persona fit" value={alignment} />
+        </div>
+        <div className="surface mt-6 p-5">
+          <p className="eyebrow eyebrow-blood mb-3">Key slots</p>
+          <div className="grid gap-px bg-rule md:grid-cols-2">
+            {[
+              ['Groq', 'backend/.env -> GROQ_API_KEY'],
+              ['Ollama', 'OLLAMA_BASE_URL=http://localhost:11434 / OLLAMA_MODEL=llama3'],
+              ['Neo4j', 'NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD when ENABLE_NEO4J=true'],
+              ['Chroma', 'CHROMA_PERSIST_PATH for local RAG memory'],
+            ].map(([label, value]) => (
+              <div key={label} className="bg-ink-deep p-4">
+                <p className="font-display text-xl text-bone tracking-tightest">{label}</p>
+                <p className="font-mono mt-2 text-[10px] tracking-[0.12em] text-bone-mute">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="surface mt-6 p-5">
+          <p className="eyebrow eyebrow-accent mb-4">Active inquiry / {query}</p>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={benchmarkRows}>
+                <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
+                <XAxis dataKey="name" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+                <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+                <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+                <Bar dataKey="target" fill="#1E1E26" radius={0} />
+                <Bar dataKey="value" fill="#D6FF3D" radius={0} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+      <div>
+        <SectionHeader numeral="§ VIII" eyebrow="Interest Drift" title="What the user is leaning toward" />
+        <Explainer label="Adaptive Suggestions">
+          The recommendation layer favors topics where PRISM score, adoption gap, trust, and user
+          interest overlap. This is a greedy adaptive ranking: high-opportunity topics rise first,
+          then persona feedback nudges the ordering over time.
+        </Explainer>
+        <div className="surface p-5 h-[30rem]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={driftRows}>
+              <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
+              <XAxis dataKey="name" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+              <Area type="monotone" dataKey="interest" stroke="#EDE6D3" fill="#EDE6D3" fillOpacity={0.1} strokeWidth={2} />
+              <Area type="monotone" dataKey="opportunity" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.18} strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function AlertCenter({ alerts }: { alerts: AgentAlertsResponse }) {
   const rows = alerts.decisions.length > 0 ? alerts.decisions : alerts.alerts;
   return (
@@ -1503,7 +1616,13 @@ function OpenClawPanel({ status }: { status: OpenClawStatus | null }) {
   );
 }
 
-function PersonaDashboard({ persona, ranked }: { persona: UserPersona | null; ranked: Array<{ item: ResearchItem; report?: FusionReport }> }) {
+function PersonaDashboard({ persona, ranked, setPersona }: { persona: UserPersona | null; ranked: Array<{ item: ResearchItem; report?: FusionReport }>; setPersona: (p: UserPersona | null) => void }) {
+  async function sendFeedback(itemId: string, action: 'liked' | 'starred' | 'dismissed' | 'shared' | 'viewed') {
+    try {
+      const updated = await api.sendFeedback('default', itemId, action);
+      setPersona(updated);
+    } catch {}
+  }
   const topicRows = Object.entries(persona?.liked_topics ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
   return (
     <section>
@@ -1533,10 +1652,16 @@ function PersonaDashboard({ persona, ranked }: { persona: UserPersona | null; ra
           </div>
         </div>
         <div className="surface p-5">
-          <p className="eyebrow eyebrow-blood mb-4">— Favourite Papers —</p>
-          <div className="space-y-3">
-            {ranked.filter(({ item }) => persona?.favourite_paper_ids.includes(item.id)).slice(0, 5).map(({ item }) => (
-              <p key={item.id} className="font-display text-lg text-bone tracking-tightest">{item.title}</p>
+          <p className="eyebrow eyebrow-blood mb-4">— Quick Actions —</p>
+          <p className="font-body text-sm italic text-bone-mute mb-4">Like, star, or dismiss papers to train your persona. Your preferences shape future suggestions.</p>
+          <div className="space-y-2">
+            {ranked.slice(0, 6).map(({ item }) => (
+              <div key={item.id} className="flex items-center gap-2 p-2 border-b border-rule last:border-b-0">
+                <span className="flex-1 font-display text-sm text-bone tracking-tightest truncate">{item.title}</span>
+                <button onClick={() => sendFeedback(item.id, 'liked')} className="p-1.5 text-bone-dim hover:text-chartreuse transition-colors" title="Like"><Heart size={14} /></button>
+                <button onClick={() => sendFeedback(item.id, 'starred')} className="p-1.5 text-bone-dim hover:text-chartreuse transition-colors" title="Star"><Star size={14} /></button>
+                <button onClick={() => sendFeedback(item.id, 'dismissed')} className="p-1.5 text-bone-dim hover:text-oxblood-glow transition-colors" title="Dismiss"><ThumbsDown size={14} /></button>
+              </div>
             ))}
           </div>
         </div>

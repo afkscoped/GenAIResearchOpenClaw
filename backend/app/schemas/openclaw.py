@@ -16,19 +16,14 @@ class OpenClawAnalyzeResponse(BaseModel):
 
 
 class OpenClawCredentials(BaseModel):
-    discord_bot_token: str | None = None
-    discord_webhook_url: str | None = None
-    telegram_bot_token: str | None = None
-    telegram_chat_id: str | None = None
-    reddit_client_id: str | None = None
-    reddit_client_secret: str | None = None
-    reddit_username: str | None = None
-    reddit_password: str | None = None
+    groq_api_key_present: bool = False
+    ollama_model: str | None = None
 
 
 class OpenClawStatus(BaseModel):
     enable_openclaw: bool
     openclaw_url: str
-    has_discord_webhook: bool
     has_llm_key: bool
+    ollama_base_url: str
+    ollama_model: str
     credentials_configured: dict[str, bool]

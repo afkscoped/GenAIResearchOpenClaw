@@ -26,17 +26,17 @@ def analyze_with_openclaw(payload: OpenClawAnalyzeRequest) -> OpenClawAnalyzeRes
 @router.get("/status", response_model=OpenClawStatus)
 def openclaw_status() -> OpenClawStatus:
     settings = get_settings()
-    credentials = _load_credentials()
     return OpenClawStatus(
         enable_openclaw=settings.enable_openclaw,
         openclaw_url=settings.openclaw_url,
-        has_discord_webhook=bool(settings.discord_webhook_url),
-        has_llm_key=bool(settings.llm_api_key),
+        has_llm_key=bool(settings.groq_api_key or settings.llm_api_key),
+        ollama_base_url=settings.ollama_base_url,
+        ollama_model=settings.ollama_model,
         credentials_configured={
-            "discord_bot": bool(credentials.discord_bot_token),
-            "discord_webhook": bool(credentials.discord_webhook_url or settings.discord_webhook_url),
-            "telegram": bool(credentials.telegram_bot_token and credentials.telegram_chat_id),
-            "reddit": bool(credentials.reddit_client_id and credentials.reddit_client_secret),
+            "groq": bool(settings.groq_api_key or settings.llm_api_key),
+            "ollama": True,
+            "chroma": True,
+            "neo4j": settings.enable_neo4j,
         },
     )
 
