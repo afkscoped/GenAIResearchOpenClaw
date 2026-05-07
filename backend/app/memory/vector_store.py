@@ -38,10 +38,15 @@ class LocalVectorMemory:
         created = 0
         for item in items:
             exists = db.query(MemoryDocument).filter(MemoryDocument.item_id == item.id).first()
-            if exists:
-                continue
             text = f"{item.title}\n{item.abstract}\n{item.topic}\n{item.metadata}"
             embedding, signature = sparse_embedding(text)
+            if exists:
+                if exists.text != text or exists.embedding != embedding or exists.token_signature != signature:
+                    exists.text = text
+                    exists.embedding = embedding
+                    exists.token_signature = signature
+                    created += 1
+                continue
             db.add(MemoryDocument(item_id=item.id, text=text, embedding=embedding, token_signature=signature))
             created += 1
         db.commit()

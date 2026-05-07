@@ -2,7 +2,7 @@ export type ResearchItem = {
   id: string;
   title: string;
   abstract: string;
-  source: 'arxiv' | 'github' | 'huggingface' | 'news' | 'mock_social' | 'mock_jobs';
+  source: 'arxiv' | 'github' | 'huggingface' | 'news' | 'mock_social' | 'mock_jobs' | 'semantic_scholar' | 'crossref' | 'papers_with_code' | 'product_launch' | 'engineering_blog';
   url: string;
   authors: string[];
   organizations: string[];
@@ -77,6 +77,7 @@ export type PipelineRunResponse = {
   entity_links: number;
   memory_documents: number;
   sources: string[];
+  item_ids: string[];
 };
 
 export type MemorySearchResult = {
@@ -106,6 +107,36 @@ export type AgentAlertsResponse = {
   deliveries: Array<Record<string, unknown>>;
 };
 
+export type OpenClawStatus = {
+  enable_openclaw: boolean;
+  openclaw_url: string;
+  has_discord_webhook: boolean;
+  has_llm_key: boolean;
+  credentials_configured: Record<string, boolean>;
+};
+
+export type UserPersona = {
+  user_id: string;
+  liked_topics: Record<string, number>;
+  liked_sources: Record<string, number>;
+  min_trust_threshold: number;
+  favourite_paper_ids: string[];
+  interaction_history: Array<Record<string, unknown>>;
+  domain_weights: Record<string, number>;
+  last_updated: string;
+};
+
+export type Suggestion = {
+  item_id: string;
+  title: string;
+  topic: string;
+  source: string;
+  url: string;
+  prism_score: number;
+  personalised_score: number;
+  reason: string;
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -117,15 +148,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  runPipeline: (query = 'multimodal agents') =>
-    request<PipelineRunResponse>(`/api/run-pipeline?query=${encodeURIComponent(query)}&include_demo=true`, { method: 'POST' }),
-  listItems: () => request<ResearchItem[]>('/api/items?limit=100'),
+  runPipeline: (query = 'multimodal agents', includeDemo = false) =>
+    request<PipelineRunResponse>(`/api/run-pipeline?query=${encodeURIComponent(query)}&include_demo=${includeDemo ? 'true' : 'false'}`, { method: 'POST' }),
+  listItems: (query?: string) => request<ResearchItem[]>(`/api/items?limit=100${query ? `&q=${encodeURIComponent(query)}` : ''}`),
   getItem: (id: string) => request<ItemDetail>(`/api/items/${id}`),
-  listFusionReports: () => request<FusionReport[]>('/api/analysis/fusion-reports?limit=100'),
+  listFusionReports: (query?: string, refresh = false) =>
+    request<FusionReport[]>(`/api/analysis/fusion-reports?limit=100&refresh=${refresh ? 'true' : 'false'}${query ? `&q=${encodeURIComponent(query)}` : ''}`),
   getFusionReport: (id: string) => request<FusionReport>(`/api/analysis/fusion-reports/${id}`),
   listEngineRuns: (id: string) => request<EngineRun[]>(`/api/analysis/engine-runs/${id}?limit=20`),
   searchMemory: (query: string) => request<MemorySearchResult[]>(`/api/memory/search?q=${encodeURIComponent(query)}&limit=8`),
   listLinks: () => request<EntityLink[]>('/api/memory/links?limit=100'),
   listAgentAlerts: () => request<AgentAlertsResponse>('/api/agent/alerts'),
+  openClawStatus: () => request<OpenClawStatus>('/api/openclaw/status'),
+  getPersona: (userId = 'default') => request<UserPersona>(`/api/persona/${encodeURIComponent(userId)}`),
+  getSuggestions: (userId = 'default', query?: string) =>
+    query
+      ? request<Suggestion[]>(`/api/persona/${encodeURIComponent(userId)}/suggest/search?q=${encodeURIComponent(query)}&limit=10`)
+      : request<Suggestion[]>(`/api/persona/${encodeURIComponent(userId)}/suggest?limit=10`),
+  sendFeedback: (userId: string, itemId: string, action: 'liked' | 'starred' | 'dismissed' | 'shared' | 'viewed') =>
+    request<UserPersona>(`/api/persona/${encodeURIComponent(userId)}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, action }),
+    }),
   weeklyReportUrl: () => `${API_BASE}/api/reports/weekly.md`,
 };

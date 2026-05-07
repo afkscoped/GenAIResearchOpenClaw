@@ -1,4 +1,5 @@
 from app.db.models import ResearchItem, SourceSignal
+from app.engines.llm_client import enhance_verdict
 from app.engines.schemas import EngineResult, clamp
 from app.engines.utils import has_any_url, text_blob
 
@@ -50,6 +51,16 @@ class TrustEngine:
             verdict = "Medium trust: useful but some replication details are missing."
         else:
             verdict = "Low trust: insufficient reproducibility evidence."
+
+        verdict, evidence = enhance_verdict(
+            engine_name="TrustEngine",
+            heuristic_verdict=verdict,
+            heuristic_score=score,
+            item_title=item.title,
+            item_abstract=item.abstract or "",
+            evidence_points=evidence,
+            extra_context=f"source={item.source}, metadata_keys={sorted(metadata.keys())}",
+        )
 
         return EngineResult(
             score=round(score, 4),

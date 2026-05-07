@@ -19,10 +19,6 @@ from app.core.config import get_settings
 
 logger = logging.getLogger("prism.agent.openclaw_client")
 
-OPENCLAW_URL = "http://localhost:9000"
-TIMEOUT_SECONDS = 30  # generous timeout for LLM processing
-
-
 @dataclass
 class OpenClawResult:
     """Structured result from the OpenClaw Agent Service."""
@@ -42,6 +38,10 @@ def analyze(
 
     Falls back to heuristic scoring if OpenClaw is unreachable.
     """
+    settings = get_settings()
+    if not settings.enable_openclaw:
+        return _fallback(scores)
+
     payload = {
         "title": title,
         "abstract": abstract[:600],  # limit payload size
@@ -58,8 +58,8 @@ def analyze(
     logger.debug("   Payload: %s", payload)
 
     try:
-        with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
-            resp = client.post(f"{OPENCLAW_URL}/analyze", json=payload)
+        with httpx.Client(timeout=settings.openclaw_timeout_seconds) as client:
+            resp = client.post(f"{settings.openclaw_url}/analyze", json=payload)
             resp.raise_for_status()
             data = resp.json()
 
@@ -75,10 +75,10 @@ def analyze(
         )
 
     except httpx.ConnectError:
-        logger.warning("🔌 OpenClaw service not reachable at %s — using fallback.", OPENCLAW_URL)
+        logger.warning("🔌 OpenClaw service not reachable at %s — using fallback.", settings.openclaw_url)
         return _fallback(scores)
     except httpx.TimeoutException:
-        logger.warning("⏰ OpenClaw timed out after %ds — using fallback.", TIMEOUT_SECONDS)
+        logger.warning("⏰ OpenClaw timed out after %.1fs — using fallback.", settings.openclaw_timeout_seconds)
         return _fallback(scores)
     except Exception as exc:
         logger.error("❌ OpenClaw error: %s — using fallback.", exc)

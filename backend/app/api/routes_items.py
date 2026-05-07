@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import EntityLink, ResearchItem, SourceSignal
 from app.db.session import get_db
+from app.api.query_filters import apply_item_search_filter
 from app.schemas.research import EntityLinkRead, ResearchItemRead, SourceSignalRead
 
 router = APIRouter(prefix="/api/items", tags=["items"])
@@ -10,12 +11,14 @@ router = APIRouter(prefix="/api/items", tags=["items"])
 
 @router.get("", response_model=list[ResearchItemRead])
 def list_items(
+    q: str | None = Query(default=None, min_length=2),
     topic: str | None = None,
     source: str | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
 ) -> list[ResearchItem]:
     query = db.query(ResearchItem).order_by(ResearchItem.timestamp.desc())
+    query = apply_item_search_filter(query, q)
     if topic:
         query = query.filter(ResearchItem.topic.ilike(f"%{topic}%"))
     if source:

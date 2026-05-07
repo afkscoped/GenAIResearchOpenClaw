@@ -301,7 +301,10 @@ import {
   type FusionReport,
   type ItemDetail,
   type MemorySearchResult,
+  type OpenClawStatus,
   type ResearchItem,
+  type Suggestion,
+  type UserPersona,
 } from './api/client';
 import {
   fallbackAgentAlerts,
@@ -316,7 +319,7 @@ import { EvidencePanel } from './components/EvidencePanel';
 import { ScoreOrb } from './components/ScoreOrb';
 import { SignalConstellation } from './components/SignalConstellation';
 
-type ViewKey = 'command' | 'topics' | 'battle' | 'atlas' | 'radar' | 'history' | 'alerts';
+type ViewKey = 'command' | 'topics' | 'battle' | 'atlas' | 'radar' | 'history' | 'alerts' | 'openclaw' | 'persona' | 'suggest';
 
 const sourceColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#3E5C5A', '#A8A092', '#7B1E1E'];
 
@@ -328,6 +331,9 @@ const views: Array<{ key: ViewKey; label: string; icon: typeof Activity; numeral
   { key: 'radar',    label: 'Transfer',   icon: RadarIcon,    numeral: 'V' },
   { key: 'history',  label: 'Chronicle',  icon: TrendingUp,   numeral: 'VI' },
   { key: 'alerts',   label: 'Dispatch',   icon: Bell,         numeral: 'VII' },
+  { key: 'openclaw', label: 'OpenClaw',    icon: BrainCircuit, numeral: 'VIII' },
+  { key: 'persona',  label: 'Persona',     icon: ShieldCheck,  numeral: 'IX' },
+  { key: 'suggest',  label: 'Suggest',     icon: Sparkles,     numeral: 'X' },
 ];
 
 function byReport(items: ResearchItem[], reports: FusionReport[]) {
@@ -382,6 +388,20 @@ function topicData(items: ResearchItem[], reports: FusionReport[]) {
     .sort((left, right) => right.score - left.score);
 }
 
+function filterAlertsForQuery(alerts: AgentAlertsResponse, query: string, itemIds: Set<string>): AgentAlertsResponse {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = (decision: AgentAlertsResponse['decisions'][number]) => {
+    if (itemIds.has(decision.signal.item_id)) return true;
+    const haystack = `${decision.signal.title} ${decision.signal.topic} ${decision.signal.source}`.toLowerCase();
+    return terms.length > 0 && terms.every((term) => haystack.includes(term));
+  };
+  return {
+    alerts: alerts.alerts.filter(matches),
+    decisions: alerts.decisions.filter(matches),
+    deliveries: alerts.deliveries,
+  };
+}
+
 function App() {
   const [items, setItems] = useState<ResearchItem[]>(fallbackItems);
   const [reports, setReports] = useState<FusionReport[]>(fallbackReports);
@@ -389,6 +409,9 @@ function App() {
   const [detail, setDetail] = useState<ItemDetail>(fallbackDetail(fallbackItems[0]));
   const [history, setHistory] = useState<EngineRun[]>(fallbackEngineRuns);
   const [alerts, setAlerts] = useState<AgentAlertsResponse>(fallbackAgentAlerts);
+  const [openClawStatus, setOpenClawStatus] = useState<OpenClawStatus | null>(null);
+  const [persona, setPersona] = useState<UserPersona | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [memoryResults, setMemoryResults] = useState<MemorySearchResult[]>(fallbackMemoryResults);
   const [loading, setLoading] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -405,22 +428,34 @@ function App() {
   const timelineData = useMemo(() => engineTimeline(reports), [reports]);
   const topics = useMemo(() => topicData(items, reports), [items, reports]);
 
-  async function loadLiveData() {
+  async function loadLiveData(activeQuery = query, refreshReports = false) {
+    const scopedQuery = activeQuery.trim();
     setLoading(true);
     try {
       const [nextItems, nextReports, nextAlerts] = await Promise.all([
-        api.listItems(),
-        api.listFusionReports(),
+        api.listItems(scopedQuery),
+        api.listFusionReports(scopedQuery, refreshReports),
         api.listAgentAlerts().catch(() => fallbackAgentAlerts),
       ]);
+      api.openClawStatus().then(setOpenClawStatus).catch(() => setOpenClawStatus(null));
+      api.getPersona().then(setPersona).catch(() => setPersona(null));
+      api.getSuggestions('default', scopedQuery).then(setSuggestions).catch(() => setSuggestions([]));
+      api.searchMemory(scopedQuery).then((results) => setMemoryResults(results)).catch(() => setMemoryResults([]));
+      const itemIds = new Set(nextItems.map((item) => item.id));
       if (nextItems.length > 0) {
         setItems(nextItems);
-        setReports(nextReports.length > 0 ? nextReports : fallbackReports);
+        setReports(nextReports);
         setSelectedId(nextItems[0].id);
-        setAlerts(nextAlerts);
-        setNotice('Live edition · backend memory engaged.');
+        setAlerts(filterAlertsForQuery(nextAlerts, scopedQuery, itemIds));
+        setNotice(`Live edition · "${scopedQuery}" session loaded with ${nextItems.length} results.`);
       } else {
-        setNotice('Backend reachable · awaiting first pipeline run.');
+        setItems([]);
+        setReports([]);
+        setSelectedId('');
+        setHistory([]);
+        setSuggestions([]);
+        setAlerts(filterAlertsForQuery(nextAlerts, scopedQuery, itemIds));
+        setNotice(`Backend reachable · no stored results for "${scopedQuery}" yet.`);
       }
     } catch (error) {
       setItems(fallbackItems);
@@ -434,11 +469,16 @@ function App() {
   }
 
   async function runPipeline() {
+    const scopedQuery = query.trim();
+    if (!scopedQuery) {
+      setNotice('Enter a research inquiry first.');
+      return;
+    }
     setLoading(true);
     try {
-      const result = await api.runPipeline(query);
-      setNotice(`Press run · ${result.ingested_items} ingested / ${result.stored_items} new / ${result.entity_links} links.`);
-      await loadLiveData();
+      const result = await api.runPipeline(scopedQuery, false);
+      setNotice(`Press run · "${scopedQuery}" · ${result.ingested_items} ingested / ${result.stored_items} new / ${result.entity_links} links.`);
+      await loadLiveData(scopedQuery, true);
     } catch (error) {
       setNotice('Pipeline unreachable · holding the demo edition.');
       setLoading(false);
@@ -456,12 +496,15 @@ function App() {
   }
 
   useEffect(() => {
-    loadLiveData();
+    loadLiveData(query);
   }, []);
 
   useEffect(() => {
     const item = items.find((entry) => entry.id === selectedId);
-    if (!item) return;
+    if (!item) {
+      setHistory([]);
+      return;
+    }
     api.getItem(item.id).then(setDetail).catch(() => setDetail(fallbackDetail(item)));
     api
       .listEngineRuns(item.id)
@@ -494,6 +537,9 @@ function App() {
     topics,
     history,
     alerts,
+    openClawStatus,
+    persona,
+    suggestions,
     setSelectedId,
     setActiveView,
   };
@@ -532,6 +578,9 @@ function App() {
             {activeView === 'radar' && <CrossDomainRadar ranked={ranked} />}
             {activeView === 'history' && <EngineHistoryChart history={history} selectedTitle={selected?.item.title ?? 'Selected dispatch'} />}
             {activeView === 'alerts' && <AlertCenter alerts={alerts} />}
+            {activeView === 'openclaw' && <OpenClawPanel status={openClawStatus} />}
+            {activeView === 'persona' && <PersonaDashboard persona={persona} ranked={ranked} />}
+            {activeView === 'suggest' && <SuggestionFeed suggestions={suggestions} setSelectedId={setSelectedId} setActiveView={setActiveView} />}
           </motion.div>
         </AnimatePresence>
 
@@ -848,9 +897,11 @@ function CommandCenter({
             <motion.div variants={stagItem} initial="hidden" animate="show">
               <EvidencePanel title="Explainability Trace" evidence={selectedReport?.evidence ?? []} />
             </motion.div>
-            <motion.div variants={stagItem} initial="hidden" animate="show">
-              <EntityLinks detail={detail} />
-            </motion.div>
+            {selected && (
+              <motion.div variants={stagItem} initial="hidden" animate="show">
+                <EntityLinks detail={detail} />
+              </motion.div>
+            )}
           </ScrollStagger>
           <Reveal>
             <EngineTrend timelineData={timelineData} />
@@ -886,6 +937,11 @@ function RankedQueue({ ranked, selectedId, setSelectedId }: any) {
         analysis on the right.
       </Explainer>
       <div className="surface">
+        {ranked.length === 0 && (
+          <div className="p-6 font-body italic text-bone-mute">
+            No papers in this research session yet. Run the press for the query above.
+          </div>
+        )}
         {ranked.map(({ item, report }: { item: ResearchItem; report?: FusionReport }, index: number) => {
           const active = selectedId === item.id;
           return (
@@ -1418,6 +1474,103 @@ function AlertCenter({ alerts }: { alerts: AgentAlertsResponse }) {
               </span>
             </div>
           </motion.article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OpenClawPanel({ status }: { status: OpenClawStatus | null }) {
+  const credentials = status?.credentials_configured ?? {};
+  return (
+    <section>
+      <SectionHeader numeral="§ VIII" eyebrow="OpenClaw" title="Connector readiness" />
+      <Explainer>
+        OpenClaw refinement and social connectors are feature-flagged. Configure keys in the backend
+        environment, then use this panel to verify what PRISM can reach.
+      </Explainer>
+      <div className="grid gap-px bg-rule md:grid-cols-2 xl:grid-cols-4">
+        <Metric label="enabled" value={status?.enable_openclaw ? 1 : 0} />
+        <Metric label="llm key" value={status?.has_llm_key ? 1 : 0} />
+        <Metric label="discord" value={credentials.discord_webhook ? 1 : 0} />
+        <Metric label="reddit" value={credentials.reddit ? 1 : 0} />
+      </div>
+      <div className="surface mt-6 p-5">
+        <p className="eyebrow eyebrow-accent mb-2">— Endpoint —</p>
+        <p className="font-mono text-sm text-bone-warm">{status?.openclaw_url ?? 'backend offline'}</p>
+      </div>
+    </section>
+  );
+}
+
+function PersonaDashboard({ persona, ranked }: { persona: UserPersona | null; ranked: Array<{ item: ResearchItem; report?: FusionReport }> }) {
+  const topicRows = Object.entries(persona?.liked_topics ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  return (
+    <section>
+      <SectionHeader numeral="§ IX" eyebrow="Persona" title="Research taste profile" />
+      <Explainer>
+        Persona state learns from likes, stars, dismissals, shares, and ratings. It boosts future
+        suggestions by topic and source while preserving the base PRISM score.
+      </Explainer>
+      <div className="mb-6 grid gap-px bg-rule md:grid-cols-3">
+        <Metric label="favourites" value={persona?.favourite_paper_ids.length ?? 0} />
+        <Metric label="interactions" value={persona?.interaction_history.length ?? 0} />
+        <Metric label="topics" value={topicRows.length} />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="surface p-5">
+          <p className="eyebrow eyebrow-accent mb-4">— Topic Weights —</p>
+          <div className="space-y-3">
+            {topicRows.length === 0 && <p className="font-body italic text-bone-mute">No feedback recorded yet.</p>}
+            {topicRows.map(([topic, weight]) => (
+              <div key={topic}>
+                <div className="mb-1 flex justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-bone-mute">
+                  <span>{topic}</span><span>{Math.round(weight * 100)}</span>
+                </div>
+                <div className="h-2 bg-rule"><div className="h-full bg-chartreuse" style={{ width: `${Math.round(weight * 100)}%` }} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="surface p-5">
+          <p className="eyebrow eyebrow-blood mb-4">— Favourite Papers —</p>
+          <div className="space-y-3">
+            {ranked.filter(({ item }) => persona?.favourite_paper_ids.includes(item.id)).slice(0, 5).map(({ item }) => (
+              <p key={item.id} className="font-display text-lg text-bone tracking-tightest">{item.title}</p>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SuggestionFeed({ suggestions, setSelectedId, setActiveView }: { suggestions: Suggestion[]; setSelectedId: (id: string) => void; setActiveView: (view: ViewKey) => void }) {
+  return (
+    <section>
+      <SectionHeader numeral="§ X" eyebrow="Suggest" title="Personalised next reads" />
+      <Explainer>
+        Suggestions combine the latest PRISM fusion reports with persona topic/source preferences.
+      </Explainer>
+      <div className="space-y-px bg-rule">
+        {suggestions.length === 0 && <div className="bg-ink-deep p-6 font-body italic text-bone-mute">No live suggestions yet. Run the backend pipeline first.</div>}
+        {suggestions.map((suggestion, index) => (
+          <button
+            key={suggestion.item_id}
+            onClick={() => { setSelectedId(suggestion.item_id); setActiveView('command'); }}
+            className="w-full bg-ink-deep p-6 text-left transition-colors hover:bg-ink-soft"
+          >
+            <div className="flex items-start justify-between gap-5">
+              <div>
+                <p className="font-mono text-[10px] tracking-[0.24em] text-chartreuse uppercase">#{index + 1} / {suggestion.topic}</p>
+                <h3 className="mt-2 font-display text-2xl text-bone tracking-tightest">{suggestion.title}</h3>
+                <p className="mt-2 font-body text-sm italic text-bone-warm">{suggestion.reason}</p>
+              </div>
+              <span className="numeral text-4xl text-chartreuse" style={{ lineHeight: 1 }}>
+                {Math.round(suggestion.personalised_score * 100)}
+              </span>
+            </div>
+          </button>
         ))}
       </div>
     </section>

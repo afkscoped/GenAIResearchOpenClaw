@@ -13,6 +13,8 @@ from app.api.routes_analysis import router as analysis_router
 from app.api.routes_health import router as health_router
 from app.api.routes_items import router as items_router
 from app.api.routes_memory import router as memory_router
+from app.api.routes_openclaw import router as openclaw_router
+from app.api.routes_persona import router as persona_router
 from app.api.routes_pipeline import router as pipeline_router
 from app.api.routes_reports import router as reports_router
 from app.agent.router import router as agent_router
@@ -51,3 +53,5 @@ app.include_router(pipeline_router)
 app.include_router(memory_router)
 app.include_router(reports_router)
 app.include_router(agent_router)
+app.include_router(openclaw_router)
+app.include_router(persona_router)

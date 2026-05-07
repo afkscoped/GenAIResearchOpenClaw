@@ -1,4 +1,5 @@
 from app.db.models import ResearchItem
+from app.engines.llm_client import enhance_verdict
 from app.engines.schemas import EngineResult, clamp
 from app.engines.utils import text_blob
 
@@ -72,6 +73,16 @@ class CrossDomainEngine:
             verdict = "Moderate cross-domain opportunity worth exploring."
         else:
             verdict = "Low cross-domain transfer signal in the current corpus."
+
+        verdict, evidence = enhance_verdict(
+            engine_name="CrossDomainEngine",
+            heuristic_verdict=verdict,
+            heuristic_score=score,
+            item_title=item.title,
+            item_abstract=item.abstract or "",
+            evidence_points=evidence,
+            extra_context=f"source_domain={source_domain}, target_domain={target_domain}, technique={technique}",
+        )
 
         return EngineResult(
             score=round(score, 4),

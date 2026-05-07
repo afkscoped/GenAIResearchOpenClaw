@@ -1,4 +1,5 @@
 from app.db.models import ResearchItem, SourceSignal
+from app.engines.llm_client import enhance_verdict
 from app.engines.schemas import EngineResult, clamp
 from app.engines.utils import log_norm, signal_totals, text_blob
 
@@ -41,6 +42,16 @@ class GapEngine:
             verdict = "Moderate adoption gap: there may be a near-term product opportunity."
         else:
             verdict = "Small adoption gap: industry signal is already visible or research momentum is still early."
+
+        verdict, evidence = enhance_verdict(
+            engine_name="GapEngine",
+            heuristic_verdict=verdict,
+            heuristic_score=gap_score,
+            item_title=item.title,
+            item_abstract=item.abstract or "",
+            evidence_points=evidence,
+            extra_context=f"source={item.source}, academic_momentum={academic_momentum:.4f}, industry_signal={industry_signal:.4f}",
+        )
 
         return EngineResult(
             score=round(gap_score, 4),

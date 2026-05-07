@@ -1,4 +1,5 @@
 from app.db.models import ResearchItem, SourceSignal
+from app.engines.llm_client import enhance_verdict
 from app.engines.schemas import EngineResult, clamp
 from app.engines.utils import log_norm, recency_score, signal_totals
 
@@ -37,6 +38,16 @@ class SignalEngine:
             verdict = "Moderate emerging signal worth monitoring."
         else:
             verdict = "Weak early signal; keep as background context."
+
+        verdict, evidence = enhance_verdict(
+            engine_name="SignalEngine",
+            heuristic_verdict=verdict,
+            heuristic_score=score,
+            item_title=item.title,
+            item_abstract=item.abstract or "",
+            evidence_points=evidence,
+            extra_context=f"source={item.source}, totals={totals}",
+        )
 
         return EngineResult(score=round(score, 4), verdict=verdict, evidence=evidence, details=totals)
 

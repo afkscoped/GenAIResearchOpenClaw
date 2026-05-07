@@ -9,4 +9,13 @@ dist/
 build/
 .DS_Store
 .pytest_cache/
+pytest-cache-files-*/
 .coverage
+creds.enc
+creds.key
+backend/creds.enc
+backend/creds.key
+backend/server.out.log
+backend/server.err.log
+frontend/vite.out.log
+frontend/vite.err.log

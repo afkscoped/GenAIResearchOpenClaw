@@ -12,6 +12,8 @@ endpoints.
 
 from __future__ import annotations
 
+import re
+
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -58,7 +60,9 @@ def _related_context(
     related_items: list[ResearchItem] = []
     if linked_ids:
         related_items.extend(
-            db.query(ResearchItem).filter(ResearchItem.id.in_(linked_ids)).all()
+            related
+            for related in db.query(ResearchItem).filter(ResearchItem.id.in_(linked_ids)).all()
+            if _content_overlap(item, related) >= 0.08
         )
 
     same_topic = (
@@ -70,11 +74,24 @@ def _related_context(
     )
     seen = {r.id for r in related_items}
     for r in same_topic:
-        if r.id not in seen:
+        if r.id not in seen and _content_overlap(item, r) >= 0.08:
             related_items.append(r)
             seen.add(r.id)
 
     return related_items, links
+
+
+def _content_overlap(left: ResearchItem, right: ResearchItem) -> float:
+    left_tokens = _content_tokens(left)
+    right_tokens = _content_tokens(right)
+    if not left_tokens or not right_tokens:
+        return 0.0
+    return len(left_tokens & right_tokens) / max(len(left_tokens | right_tokens), 1)
+
+
+def _content_tokens(item: ResearchItem) -> set[str]:
+    text = f"{item.title} {item.abstract} {item.extra_metadata}".lower()
+    return {token for token in re.findall(r"[a-zA-Z0-9]+", text) if len(token) > 2}
 
 
 # ---------------------------------------------------------------------------

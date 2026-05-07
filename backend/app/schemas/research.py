@@ -94,6 +94,7 @@ class PipelineRunResponse(BaseModel):
     entity_links: int
     memory_documents: int
     sources: list[str]
+    item_ids: list[str] = Field(default_factory=list)
 
 
 class MemorySearchResult(BaseModel):

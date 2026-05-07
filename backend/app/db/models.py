@@ -123,3 +123,30 @@ class FusionReportRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
     item: Mapped[ResearchItem] = relationship(back_populates="fusion_reports")
+
+
+class UserPersonaRecord(Base):
+    __tablename__ = "user_personas"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True, index=True)
+    liked_topics: Mapped[dict] = mapped_column(JSON, default=dict)
+    liked_sources: Mapped[dict] = mapped_column(JSON, default=dict)
+    min_trust_threshold: Mapped[float] = mapped_column(Float, default=0.4)
+    favourite_paper_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    interaction_history: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    domain_weights: Mapped[dict] = mapped_column(JSON, default=dict)
+    last_updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class PaperRating(Base):
+    __tablename__ = "paper_ratings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_id: Mapped[str] = mapped_column(ForeignKey("research_items.id"), index=True)
+    user_id: Mapped[str] = mapped_column(String(200), index=True)
+    rating: Mapped[int] = mapped_column(Integer, default=0)
+    tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    is_favourite: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

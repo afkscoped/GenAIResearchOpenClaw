@@ -1,4 +1,5 @@
 from app.db.models import EntityLink, ResearchItem
+from app.engines.llm_client import enhance_verdict
 from app.engines.schemas import EngineResult, clamp
 from app.engines.utils import text_blob, tokenize
 
@@ -50,6 +51,16 @@ class DebateEngine:
             verdict = "Moderate debate risk: related evidence suggests uncertainty."
         else:
             verdict = "Low debate risk: no major contradiction cluster found yet."
+
+        verdict, evidence = enhance_verdict(
+            engine_name="DebateEngine",
+            heuristic_verdict=verdict,
+            heuristic_score=score,
+            item_title=item.title,
+            item_abstract=item.abstract or "",
+            evidence_points=evidence,
+            extra_context=f"related_items={len(related_items)}, links={len(links)}",
+        )
 
         return EngineResult(
             score=round(score, 4),
