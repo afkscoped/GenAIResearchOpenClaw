@@ -50,6 +50,15 @@ export const fallbackReports: FusionReport[] = [
     transferability_score: 0.52,
     verdict: 'High-priority PRISM opportunity: strong signal, usable trust evidence, and clear strategic value.',
     evidence: ['Signal Engine: Strong emerging signal.', 'Trust Engine: Code and benchmark signals detected.', 'Gap Engine: Industry adoption appears behind academic momentum.'],
+    cross_domain_details: {
+      source_domain: 'nlp',
+      target_domain: 'computer vision',
+      technique: 'multimodal routing',
+      active_domains: ['nlp', 'computer vision'],
+      candidate_topics: ['multimodal agents'],
+      domain_scores: [{ domain: 'nlp', score: 0.48 }, { domain: 'computer vision', score: 0.42 }, { domain: 'robotics', score: 0.18 }],
+      transfer_path: { source: 'nlp', target: 'computer vision' },
+    },
   },
   {
     item_id: 'demo-replication-risk',
@@ -61,6 +70,15 @@ export const fallbackReports: FusionReport[] = [
     transferability_score: 0.3,
     verdict: 'Contested opportunity: valuable to track, but claims require careful validation.',
     evidence: ['Debate Engine: replication and distribution shift language detected.', 'Trust Engine: dataset exists but public code is unclear.'],
+    cross_domain_details: {
+      source_domain: 'computer vision',
+      target_domain: 'security',
+      technique: 'adversarial evaluation',
+      active_domains: ['computer vision', 'security'],
+      candidate_topics: ['multimodal agents'],
+      domain_scores: [{ domain: 'computer vision', score: 0.52 }, { domain: 'security', score: 0.36 }, { domain: 'nlp', score: 0.22 }],
+      transfer_path: { source: 'computer vision', target: 'security' },
+    },
   },
   {
     item_id: 'demo-cross-domain',

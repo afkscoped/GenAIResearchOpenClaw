@@ -18,7 +18,7 @@ function Reveal({
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
+      viewport={{ once: true, margin: '0px' }}
       transition={{ duration: 0.75, delay, ease: [0.2, 0.7, 0.2, 1] }}
     >
       {children}
@@ -32,7 +32,7 @@ function ScrollStagger({ children, className }: { children: ReactNode; className
       className={className}
       initial="hidden"
       whileInView="show"
-      viewport={{ once: true, margin: '-80px' }}
+      viewport={{ once: true, margin: '0px' }}
       variants={{
         hidden: {},
         show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
@@ -328,6 +328,7 @@ import { PaperChat } from './components/PaperChat';
 type ViewKey = 'command' | 'topics' | 'debate' | 'atlas' | 'radar' | 'history' | 'benchmarks' | 'persona' | 'suggest' | 'chat';
 
 const sourceColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#3E5C5A', '#A8A092', '#7B1E1E'];
+const crossDomainColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#63A69F', '#A8A092'];
 
 const views: Array<{ key: ViewKey; label: string; icon: typeof Activity; numeral: string }> = [
   { key: 'command', label: 'Front Page', icon: Activity, numeral: 'I' },
@@ -392,6 +393,25 @@ function topicData(items: ResearchItem[], reports: FusionReport[]) {
       gap: Math.round((entry.gap / entry.count) * 100),
     }))
     .sort((left, right) => right.score - left.score);
+}
+
+function displayTopic(item: ResearchItem, report?: FusionReport) {
+  const topic = item.topic?.trim();
+  if (topic && topic.toLowerCase() !== 'general') return topic;
+  const fallback = report?.cross_domain_details?.candidate_topics?.find(Boolean);
+  return fallback ?? topic ?? 'general';
+}
+
+function domainScore(report: FusionReport | undefined, domain: string) {
+  const score = report?.cross_domain_details?.domain_scores?.find((entry) => entry.domain === domain)?.score;
+  return Math.round((score ?? 0) * 100);
+}
+
+function transferPath(report?: FusionReport) {
+  const details = report?.cross_domain_details;
+  const source = details?.transfer_path?.source ?? details?.source_domain;
+  const target = details?.transfer_path?.target ?? details?.target_domain;
+  return source && target ? `${source} → ${target}` : null;
 }
 
 function filterAlertsForQuery(alerts: AgentAlertsResponse, query: string, itemIds: Set<string>): AgentAlertsResponse {
@@ -610,13 +630,14 @@ function App() {
 }
 
 function Masthead({ dateLabel, notice, loading }: { dateLabel: string; notice: string; loading: boolean }) {
-  const letters = 'Research Intelligence Command Center'.split('  ');
+  const line1 = 'Research Intelligence'.split('');
+  const line2 = 'Command Center'.split('');
   return (
     <motion.header
       className="mb-8"
-      initial={{ opacity: 0, y: -16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: [0.2, 0.7, 0.2, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
     >
       <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.32em] text-bone-mute uppercase">
         <div className="flex items-center gap-3">
@@ -644,29 +665,48 @@ function Masthead({ dateLabel, notice, loading }: { dateLabel: string; notice: s
         className="rule-double mt-3 origin-left"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
-        transition={{ duration: 0.9, delay: 0.2, ease: [0.2, 0.7, 0.2, 1] }}
+        transition={{ duration: 0.9, delay: 0.1, ease: [0.2, 0.7, 0.2, 1] }}
       />
       <div className="mt-3 flex items-end justify-between">
         <h1
-          className="prism-title leading-none tracking-tightest"
+          className="prism-title leading-[0.85] tracking-tightest"
           style={{ fontSize: 'clamp(1.5rem, 6vw, 5.5rem)', fontFamily: 'Times New Roman, serif', fontWeight: 400, fontVariationSettings: '"opsz" 144, "SOFT" 80, "WONK" 0' }}
           aria-label="Research Intelligence Command Center"
         >
-          {letters.map((letter, i) => (
-            <motion.span
-              key={i}
-              style={{ display: 'inline-block', color: '#E74C3C' }}
-              initial={{ opacity: 0, y: 60, rotate: -6 }}
-              animate={{ opacity: 1, y: 0, rotate: 0 }}
-              transition={{
-                duration: 0.9,
-                delay: 0.3 + i * 0.07,
-                ease: [0.2, 0.7, 0.2, 1],
-              }}
-            >
-              {letter}
-            </motion.span>
-          ))}
+          <span className="block">
+            {line1.map((letter, i) => (
+              <motion.span
+                key={i}
+                style={{ display: 'inline-block' }}
+                initial={{ opacity: 0, y: 30, rotate: -3 }}
+                animate={{ opacity: 1, y: 0, rotate: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 0.1 + i * 0.02,
+                  ease: [0.2, 0.7, 0.2, 1],
+                }}
+              >
+                {letter === ' ' ? '\u00A0' : letter}
+              </motion.span>
+            ))}
+          </span>
+          <span className="block mt-1">
+            {line2.map((letter, i) => (
+              <motion.span
+                key={i}
+                style={{ display: 'inline-block' }}
+                initial={{ opacity: 0, y: 30, rotate: -3 }}
+                animate={{ opacity: 1, y: 0, rotate: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 0.45 + i * 0.02,
+                  ease: [0.2, 0.7, 0.2, 1],
+                }}
+              >
+                {letter === ' ' ? '\u00A0' : letter}
+              </motion.span>
+            ))}
+          </span>
         </h1>
         <motion.div
           className="hidden md:block text-right"
@@ -710,7 +750,7 @@ function NavBar({
       className="mb-10 space-y-4"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, delay: 0.9 }}
+      transition={{ duration: 0.7, delay: 0.5 }}
     >
       {/* Top tab strip — compact section toggles */}
       <div className="flex items-stretch overflow-x-auto border border-rule bg-ink-deep">
@@ -794,7 +834,7 @@ function CommandCenter({
           className="col-span-12 lg:col-span-8"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.1, ease: [0.2, 0.7, 0.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.7, ease: [0.2, 0.7, 0.2, 1] }}
         >
           <div className="flex items-center gap-4 mb-6">
             <span className="chip chip-chart">— Lead Story —</span>
@@ -834,7 +874,7 @@ function CommandCenter({
           className="col-span-12 lg:col-span-4 lg:border-l lg:border-rule lg:pl-10"
           initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 1.3, ease: [0.2, 0.7, 0.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.9, ease: [0.2, 0.7, 0.2, 1] }}
         >
           <div className="flex justify-center lg:justify-end">
             <ScoreOrb label="PRISM Priority" score={topReport?.prism_score ?? 0} size="lg" />
@@ -1101,9 +1141,9 @@ function EngineTrend({ timelineData }: { timelineData: Array<Record<string, numb
       <SectionHeader numeral="  VII" eyebrow="Trend Contours" title="The engine over time" />
       <Explainer label="Reading the Contours">
         <p>
-          <span className="text-chartreuse not-italic"></span> tracks novelty — pre-publication
+          <span className="text-chartreuse not-italic">Chartreuse</span> tracks novelty and
           buzz building up. <span className="text-bone not-italic">Bone</span> tracks trust as
-          reproducibility evidence accumulates. <span className="text-oxblood-glow not-italic"></span>{' '}
+          reproducibility evidence accumulates. <span className="text-oxblood-glow not-italic">Oxblood</span>{' '}
           tracks the adoption gap between research momentum and industry uptake.
         </p>
       </Explainer>
@@ -1324,11 +1364,32 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
 }
 
 function CrossDomainRadar({ ranked }: any) {
-  const radarData = ranked.slice(0, 6).map(({ item, report }: any) => ({
-    topic: item.topic.slice(0, 16),
-    transfer: Math.round((report?.transferability_score ?? 0) * 100),
-    novelty: Math.round((report?.novelty_score ?? 0) * 100),
+  const candidateRows = ranked
+    .filter(({ report }: any) => (report?.transferability_score ?? 0) > 0.2)
+    .slice(0, 5);
+  const visibleCandidates = candidateRows.length ? candidateRows : ranked.slice(0, 5);
+  const domainNames = Array.from(
+    new Set<string>(
+      visibleCandidates.flatMap(({ report }: any) =>
+        (report?.cross_domain_details?.domain_scores ?? [])
+          .filter((entry: any) => entry.score > 0)
+          .map((entry: any) => entry.domain)
+      )
+    )
+  )
+    .sort((left, right) => {
+      const leftMax = Math.max(...visibleCandidates.map(({ report }: any) => domainScore(report, left)));
+      const rightMax = Math.max(...visibleCandidates.map(({ report }: any) => domainScore(report, right)));
+      return rightMax - leftMax;
+    })
+    .slice(0, 7);
+  const radarData = domainNames.map((domain) => ({
+    domain,
+    ...Object.fromEntries(
+      visibleCandidates.map(({ report }: any, index: number) => [`candidate${index}`, domainScore(report, domain)])
+    ),
   }));
+  const hasDomainRadar = radarData.length > 2;
 
   return (
     <section className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr]">
@@ -1336,26 +1397,47 @@ function CrossDomainRadar({ ranked }: any) {
         <SectionHeader numeral="  V" eyebrow="Transfer" title="Cross-domain paths" />
         <Explainer label="Reading the Radar">
           <p>
-            <span className="text-chartreuse not-italic">(Transferability)</span> — how
-            applicable is this research to other fields? Techniques like graph neural networks or
-            diffusion models may solve problems in biology, finance, or robotics.
+            Each shape compares one candidate across detected domains. Stronger spread across two
+            or more axes means the paper has a clearer transfer path than a single-domain spike.
           </p>
           <p>
-            <span className="text-oxblood-glow not-italic">(Novelty)</span> — how new and
-            unique is this research? High novelty combined with high transfer creates the most
-            valuable cross-pollination opportunities: novel methods applied to unexpected fields.
+            The candidate list shows the topic, inferred source-to-target path, and technique so the
+            chart and evidence read together.
           </p>
         </Explainer>
         <div className="surface p-5 h-[30rem]">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={radarData}>
-              <PolarGrid stroke="rgba(237,230,211,0.12)" />
-              <PolarAngleAxis dataKey="topic" stroke="#EDE6D3" fontSize={10} />
-              <Radar name="transfer" dataKey="transfer" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.32} />
-              <Radar name="novelty" dataKey="novelty" stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.18} />
-              <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
-            </RadarChart>
-          </ResponsiveContainer>
+          {hasDomainRadar ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="rgba(237,230,211,0.12)" />
+                <PolarAngleAxis dataKey="domain" stroke="#EDE6D3" fontSize={10} />
+                {visibleCandidates.map(({ item, report }: any, index: number) => (
+                  <Radar
+                    key={item.id}
+                    name={displayTopic(item, report)}
+                    dataKey={`candidate${index}`}
+                    stroke={crossDomainColors[index % crossDomainColors.length]}
+                    fill={crossDomainColors[index % crossDomainColors.length]}
+                    fillOpacity={index === 0 ? 0.22 : 0.08}
+                    strokeWidth={2}
+                  />
+                ))}
+                <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full items-center justify-center text-center font-body text-sm italic leading-relaxed text-bone-warm">
+              Run or refresh the engines to populate per-domain comparison scores for this radar.
+            </div>
+          )}
+        </div>
+        <div className="mt-4 grid gap-2">
+          {visibleCandidates.map(({ item, report }: any, index: number) => (
+            <div key={item.id} className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-mute">
+              <span className="h-2 w-8" style={{ backgroundColor: crossDomainColors[index % crossDomainColors.length] }} />
+              <span>{displayTopic(item, report)}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div>
@@ -1366,9 +1448,10 @@ function CrossDomainRadar({ ranked }: any) {
           applicable to code generation.
         </Explainer>
         <div className="space-y-px bg-rule">
-          {ranked
-            .filter(({ report }: any) => (report?.transferability_score ?? 0) > 0.35)
-            .map(({ item, report }: any) => (
+          {visibleCandidates.map(({ item, report }: any) => {
+            const path = transferPath(report);
+            const details = report?.cross_domain_details;
+            return (
               <div key={item.id} className="bg-ink-deep p-5">
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-display text-xl text-bone tracking-tightest">{item.title}</h3>
@@ -1376,11 +1459,17 @@ function CrossDomainRadar({ ranked }: any) {
                     {Math.round((report?.transferability_score ?? 0) * 100)}
                   </span>
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-bone-mute">
+                  <span className="border border-rule px-2 py-1 text-bone">{displayTopic(item, report)}</span>
+                  {path && <span className="border border-rule px-2 py-1">{path}</span>}
+                  {details?.technique && <span className="border border-rule px-2 py-1">{details.technique}</span>}
+                </div>
                 <p className="font-body mt-2 text-sm italic text-bone-warm">
                   {report?.evidence?.find((entry: string) => entry.toLowerCase().includes('cross')) ?? report?.verdict}
                 </p>
               </div>
-            ))}
+            );
+          })}
         </div>
       </div>
     </section>

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     github_token: str | None = None
     huggingface_token: str | None = None
+    semantic_scholar_api_key: str | None = None
     news_rss_feeds: str = "https://www.technologyreview.com/feed/,https://venturebeat.com/category/ai/feed/"
     engineering_blog_rss_feeds: str = (
         "https://netflixtechblog.com/feed,"

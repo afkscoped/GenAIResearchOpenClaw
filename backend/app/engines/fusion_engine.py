@@ -50,6 +50,7 @@ class FusionEngine:
             transferability_score=cross_domain.score,
             verdict=verdict,
             evidence=evidence,
+            cross_domain_details=cross_domain.details,
         )
 
     def _verdict(

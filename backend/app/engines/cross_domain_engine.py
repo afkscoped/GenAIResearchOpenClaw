@@ -230,6 +230,20 @@ class CrossDomainEngine:
         # Count distinct domains with a non-trivial signal (>0.1)
         active_domains = [d for d, s in ranked_domains if s > 0.1]
         density_score = min(len(active_domains) / 4.0, 1.0)  # 4+ domains → full score
+        domain_score_details = [
+            {"domain": domain, "score": round(domain_score, 3)}
+            for domain, domain_score in ranked_domains
+        ]
+        candidate_topics = [
+            value
+            for value in [
+                getattr(item, "topic", None),
+                source_domain,
+                target_domain,
+                technique,
+            ]
+            if value
+        ]
 
         # ── 5. Composite score ───────────────────────────────────────────────
         score = clamp(
@@ -311,6 +325,12 @@ class CrossDomainEngine:
                 "related_score": round(related_score, 3),
                 "density_score": round(density_score, 3),
                 "active_domains": active_domains,
+                "domain_scores": domain_score_details,
+                "candidate_topics": list(dict.fromkeys(candidate_topics)),
+                "transfer_path": {
+                    "source": source_domain,
+                    "target": target_domain,
+                },
             },
         )
 
