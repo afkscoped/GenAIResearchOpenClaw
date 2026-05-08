@@ -12,8 +12,8 @@ from app.ingest.github_adapter import GitHubAdapter
 from app.ingest.huggingface_adapter import HuggingFaceAdapter
 from app.ingest.mock_social_adapter import MockJobsAdapter, MockProductLaunchAdapter, MockSocialAdapter
 from app.ingest.news_adapter import NewsAdapter
+from app.ingest.openalex_adapter import OpenAlexAdapter
 from app.ingest.papers_with_code_adapter import PapersWithCodeAdapter
-from app.ingest.semantic_scholar_adapter import SemanticScholarAdapter
 from app.ingest.normalizer import normalize_many
 from app.ingest.seed_data import demo_raw_items
 from app.memory.entity_linker import EntityLinker
@@ -31,7 +31,7 @@ class IngestionPipeline:
         settings = get_settings()
         self.adapters = [
             ArxivAdapter(),
-            SemanticScholarAdapter(),
+            OpenAlexAdapter(),
             CrossrefAdapter(settings.crossref_mailto),
             GitHubAdapter(settings.github_token),
             HuggingFaceAdapter(settings.huggingface_token),
@@ -99,7 +99,9 @@ class IngestionPipeline:
         stored_signals = 0
         changed_item_ids: set[str] = set()
         for item in items:
-            existing = db.get(ResearchItem, item.id)
+            existing = db.query(ResearchItem).filter(
+                (ResearchItem.id == item.id) | (ResearchItem.url == item.url)
+            ).first()
             if existing is None:
                 db.add(
                     ResearchItem(
@@ -118,6 +120,7 @@ class IngestionPipeline:
                 stored_items += 1
                 changed_item_ids.add(item.id)
             else:
+                item.id = existing.id
                 if self._update_existing_item(existing, item):
                     changed_item_ids.add(item.id)
             for signal in item.signals:
@@ -183,38 +186,78 @@ class IngestionPipeline:
 
     def _update_existing_item(self, existing: ResearchItem, item: NormalizedItem) -> bool:
         changed = False
-        updates = {
-            "title": item.title,
-            "abstract": item.abstract,
-            "source": item.source,
-            "url": item.url,
-            "authors": item.authors,
-            "organizations": item.organizations,
-            "topic": item.topic,
-            "timestamp": item.timestamp,
-            "extra_metadata": item.metadata,
-        }
-        for field, value in updates.items():
-            if getattr(existing, field) != value:
-                setattr(existing, field, value)
-                changed = True
+        
+        existing_sources = [s.strip() for s in existing.source.split(',')]
+        if item.source not in existing_sources:
+            existing.source = f"{existing.source}, {item.source}"
+            changed = True
+
+        if len(item.title) > len(existing.title or ""):
+            existing.title = item.title
+            changed = True
+            
+        if len(item.abstract) > len(existing.abstract or ""):
+            existing.abstract = item.abstract
+            changed = True
+            
+        if item.topic != "general" and existing.topic == "general":
+            existing.topic = item.topic
+            changed = True
+
+        current_authors = list(existing.authors or [])
+        new_authors = [a for a in (item.authors or []) if a not in current_authors]
+        if new_authors:
+            existing.authors = current_authors + new_authors
+            changed = True
+
+        current_orgs = list(existing.organizations or [])
+        new_orgs = [o for o in (item.organizations or []) if o not in current_orgs]
+        if new_orgs:
+            existing.organizations = current_orgs + new_orgs
+            changed = True
+
+        current_meta = dict(existing.extra_metadata or {})
+        meta_changed = False
+        for k, v in (item.metadata or {}).items():
+            if k not in current_meta or current_meta[k] != v:
+                current_meta[k] = v
+                meta_changed = True
+        if meta_changed:
+            existing.extra_metadata = current_meta
+            changed = True
+
         return changed
 
     def _update_existing_signal(self, existing: SourceSignal, signal) -> bool:
         changed = False
         updates = {
-            "stars": signal.stars,
-            "forks": signal.forks,
-            "commits": signal.commits,
-            "model_downloads": signal.model_downloads,
-            "mentions": signal.mentions,
-            "evidence": signal.evidence,
-            "raw_payload": signal.raw_payload,
+            "stars": max(existing.stars or 0, signal.stars or 0),
+            "forks": max(existing.forks or 0, signal.forks or 0),
+            "commits": max(existing.commits or 0, signal.commits or 0),
+            "model_downloads": max(existing.model_downloads or 0, signal.model_downloads or 0),
+            "mentions": max(existing.mentions or 0, signal.mentions or 0),
         }
         for field, value in updates.items():
             if getattr(existing, field) != value:
                 setattr(existing, field, value)
                 changed = True
+                
+        current_evidence = list(existing.evidence or [])
+        new_evidence = [e for e in (signal.evidence or []) if e not in current_evidence]
+        if new_evidence:
+            existing.evidence = current_evidence + new_evidence
+            changed = True
+            
+        current_payload = dict(existing.raw_payload or {})
+        payload_changed = False
+        for k, v in (signal.raw_payload or {}).items():
+            if k not in current_payload or current_payload[k] != v:
+                current_payload[k] = v
+                payload_changed = True
+        if payload_changed:
+            existing.raw_payload = current_payload
+            changed = True
+
         return changed
 
     def _invalidate_analysis_cache(self, db: Session, changed_item_ids: set[str]) -> None:
@@ -246,5 +289,5 @@ class IngestionPipeline:
             return True
 
         hits = sum(1 for term in terms if term in haystack)
-        required_hits = min(len(terms), max(1, math.ceil(len(terms) * 0.6)))
+        required_hits = min(len(terms), max(1, math.ceil(len(terms) * 0.4)))
         return hits >= required_hits

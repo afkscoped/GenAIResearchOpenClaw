@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 _env_path = Path(__file__).parent / "backend" / ".env"
 if _env_path.exists():
     load_dotenv(_env_path)
-    print(f"INFO:     ✅ Loaded environment from {_env_path}")
+    print(f"INFO:     [OK] Loaded environment from {_env_path}")
 else:
     load_dotenv()  # try current directory or system env
 
@@ -79,7 +79,7 @@ def _get_groq_client() -> Any:
     try:
         from groq import Groq
         _groq_client = Groq(api_key=api_key)
-        logger.info("✅ Groq LLM client initialised for OpenClaw.")
+        logger.info("[OK] Groq LLM client initialised for OpenClaw.")
         return _groq_client
     except ImportError:
         logger.warning("groq package not installed. pip install groq")
@@ -110,10 +110,10 @@ def _ask_llm(system: str, user: str, max_tokens: int = 250) -> str | None:
             )
             text = resp.choices[0].message.content
             if text:
-                logger.info("🧠 LLM response from %s (%d chars)", m, len(text))
+                logger.info("INFO: LLM response from %s (%d chars)", m, len(text))
                 return text.strip()
         except Exception as e:
-            logger.warning("⚠️ Model %s failed: %s — trying next", m, e)
+            logger.warning("[!] Model %s failed: %s — trying next", m, e)
             continue
 
     return None
@@ -246,7 +246,7 @@ def health():
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(req: AnalyzeRequest):
-    logger.info("📥 OpenClaw received: '%s'", req.title[:80])
+    logger.info("<< OpenClaw received: '%s'", req.title[:80])
     logger.info("   Scores: trust=%.2f novelty=%.2f gap=%.2f xdom=%.2f controversy=%.2f",
                 req.scores.trust, req.scores.novelty, req.scores.gap,
                 req.scores.cross_domain, req.scores.controversy)
@@ -259,6 +259,6 @@ def analyze(req: AnalyzeRequest):
         logger.warning("⚡ LLM failed — falling back to heuristic.")
         result = _heuristic_analyze(req)
 
-    logger.info("📤 OpenClaw response: score=%.2f action=%s verdict='%s'",
+    logger.info(">> OpenClaw response: score=%.2f action=%s verdict='%s'",
                 result.prism_score, result.action, result.verdict[:60])
     return result

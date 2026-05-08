@@ -114,6 +114,11 @@ def run_and_persist_engines(
         db.query(SourceSignal).filter(SourceSignal.item_id == item.id).all()
     )
     related_items, links = _related_context(db, item)
+    
+    # Aggregate signals across the entire topic cluster
+    for related in related_items:
+        related_signals = db.query(SourceSignal).filter(SourceSignal.item_id == related.id).all()
+        signals.extend(related_signals)
 
     # --- run individual engines (once only) ---------------------------------
     signal_result = SignalEngine().score(item, signals)

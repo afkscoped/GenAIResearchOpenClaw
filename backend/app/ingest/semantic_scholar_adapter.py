@@ -3,6 +3,7 @@ from typing import Any
 
 import requests
 
+from app.core.config import get_settings
 from app.ingest.base import IngestionAdapter
 
 
@@ -15,10 +16,16 @@ class SemanticScholarAdapter(IngestionAdapter):
             "limit": min(limit, 20),
             "fields": "title,abstract,url,authors,publicationDate,publicationVenue,openAccessPdf,citationCount,referenceCount,venue",
         }
+        settings = get_settings()
+        headers = {}
+        if settings.semantic_scholar_api_key:
+            headers["x-api-key"] = settings.semantic_scholar_api_key
+
         try:
             response = requests.get(
                 "https://api.semanticscholar.org/graph/v1/paper/search",
                 params=params,
+                headers=headers,
                 timeout=10,
             )
             response.raise_for_status()

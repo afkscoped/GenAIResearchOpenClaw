@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     github_token: str | None = None
     huggingface_token: str | None = None
+    semantic_scholar_api_key: str | None = None
     news_rss_feeds: str = "https://www.technologyreview.com/feed/,https://venturebeat.com/category/ai/feed/"
     engineering_blog_rss_feeds: str = (
         "https://netflixtechblog.com/feed,"
@@ -44,8 +45,9 @@ class Settings(BaseSettings):
     prism_agent_limit_per_source: int = 5
     prism_agent_include_demo: bool = True
     prism_soul_profile_path: str = "app/agent/soul_profile.yaml"
+    discord_webhook_url: str | None = None
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property
     def cors_origin_list(self) -> List[str]:

@@ -18,7 +18,7 @@ function Reveal({
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
+      viewport={{ once: true, margin: '0px' }}
       transition={{ duration: 0.75, delay, ease: [0.2, 0.7, 0.2, 1] }}
     >
       {children}
@@ -32,7 +32,7 @@ function ScrollStagger({ children, className }: { children: ReactNode; className
       className={className}
       initial="hidden"
       whileInView="show"
-      viewport={{ once: true, margin: '-80px' }}
+      viewport={{ once: true, margin: '0px' }}
       variants={{
         hidden: {},
         show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
@@ -70,12 +70,12 @@ function Explainer({
 }) {
   const accent =
     tone === 'chart' ? 'border-l-chartreuse' :
-    tone === 'blood' ? 'border-l-oxblood' :
-    'border-l-bone-dim';
+      tone === 'blood' ? 'border-l-oxblood' :
+        'border-l-bone-dim';
   const labelClass =
     tone === 'chart' ? 'eyebrow eyebrow-accent' :
-    tone === 'blood' ? 'eyebrow eyebrow-blood' :
-    'eyebrow';
+      tone === 'blood' ? 'eyebrow eyebrow-blood' :
+        'eyebrow';
   return (
     <motion.aside
       className={`mb-6 border-l-2 ${accent} bg-ink-deep/60 px-5 py-4`}
@@ -190,11 +190,10 @@ function ActionRubric() {
       <div className="rule-ticker mb-4" />
       <div className="grid gap-px bg-rule md:grid-cols-3">
         {rules.map((r) => (
-          <div key={r.title} className={`bg-ink-deep p-4 border-l-2 ${
-            r.tone === 'chart' ? 'border-l-chartreuse' :
+          <div key={r.title} className={`bg-ink-deep p-4 border-l-2 ${r.tone === 'chart' ? 'border-l-chartreuse' :
             r.tone === 'blood' ? 'border-l-oxblood' :
-            'border-l-bone-dim'
-          }`}>
+              'border-l-bone-dim'
+            }`}>
             <div className="flex items-center gap-2">
               <span className="text-base">{r.icon}</span>
               <h4 className="font-display text-lg italic text-bone tracking-tightest">{r.title}</h4>
@@ -231,12 +230,11 @@ function QuadrantGuide() {
         {cells.map((c) => (
           <div
             key={c.label}
-            className={`bg-ink-deep p-4 ${
-              c.tone === 'chart' ? 'border-l-2 border-l-chartreuse' :
+            className={`bg-ink-deep p-4 ${c.tone === 'chart' ? 'border-l-2 border-l-chartreuse' :
               c.tone === 'blood' ? 'border-l-2 border-l-oxblood' :
-              c.tone === 'bone' ? 'border-l-2 border-l-bone-dim' :
-              'border-l-2 border-l-rule'
-            }`}
+                c.tone === 'bone' ? 'border-l-2 border-l-bone-dim' :
+                  'border-l-2 border-l-rule'
+              }`}
           >
             <div className="flex items-baseline gap-3">
               <span className="numeral text-3xl text-bone-dim" style={{ lineHeight: 1 }}>{c.pos}</span>
@@ -302,6 +300,7 @@ import {
 import {
   api,
   type AgentAlertsResponse,
+  type ChatMessage,
   type ChatResponse,
   type EngineRun,
   type FusionReport,
@@ -329,18 +328,19 @@ import { PaperChat } from './components/PaperChat';
 type ViewKey = 'command' | 'topics' | 'debate' | 'atlas' | 'radar' | 'history' | 'benchmarks' | 'persona' | 'suggest' | 'chat';
 
 const sourceColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#3E5C5A', '#A8A092', '#7B1E1E'];
+const crossDomainColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#63A69F', '#A8A092'];
 
 const views: Array<{ key: ViewKey; label: string; icon: typeof Activity; numeral: string }> = [
-  { key: 'command',  label: 'Front Page', icon: Activity,     numeral: 'I' },
-  { key: 'topics',   label: 'Terrain',    icon: Telescope,    numeral: 'II' },
-  { key: 'debate',   label: 'Debate',     icon: Swords,       numeral: 'III' },
-  { key: 'atlas',    label: 'Atlas',      icon: Layers3,      numeral: 'IV' },
-  { key: 'radar',    label: 'Transfer',   icon: RadarIcon,    numeral: 'V' },
-  { key: 'history',  label: 'Chronicle',  icon: TrendingUp,   numeral: 'VI' },
-  { key: 'benchmarks', label: 'Metrics',   icon: Bell,         numeral: 'VII' },
-  { key: 'persona',  label: 'Persona',     icon: ShieldCheck,  numeral: 'VIII' },
-  { key: 'suggest',  label: 'Suggest',     icon: Sparkles,     numeral: 'IX' },
-  { key: 'chat',     label: 'Ask Papers', icon: MessageCircle, numeral: 'X' },
+  { key: 'command', label: 'Front Page', icon: Activity, numeral: 'I' },
+  { key: 'topics', label: 'Topics', icon: Telescope, numeral: 'II' },
+  { key: 'debate', label: 'Debate', icon: Swords, numeral: 'III' },
+  { key: 'atlas', label: 'Atlas', icon: Layers3, numeral: 'IV' },
+  { key: 'radar', label: 'Cross-Domain', icon: RadarIcon, numeral: 'V' },
+  { key: 'history', label: 'Chronicle', icon: TrendingUp, numeral: 'VI' },
+  { key: 'benchmarks', label: 'Metrics', icon: Bell, numeral: 'VII' },
+  { key: 'persona', label: 'Persona', icon: ShieldCheck, numeral: 'VIII' },
+  { key: 'suggest', label: 'Suggest', icon: Sparkles, numeral: 'IX' },
+  { key: 'chat', label: 'Ask Papers', icon: MessageCircle, numeral: 'X' },
 ];
 
 function byReport(items: ResearchItem[], reports: FusionReport[]) {
@@ -395,6 +395,25 @@ function topicData(items: ResearchItem[], reports: FusionReport[]) {
     .sort((left, right) => right.score - left.score);
 }
 
+function displayTopic(item: ResearchItem, report?: FusionReport) {
+  const topic = item.topic?.trim();
+  if (topic && topic.toLowerCase() !== 'general') return topic;
+  const fallback = report?.cross_domain_details?.candidate_topics?.find(Boolean);
+  return fallback ?? topic ?? 'general';
+}
+
+function domainScore(report: FusionReport | undefined, domain: string) {
+  const score = report?.cross_domain_details?.domain_scores?.find((entry) => entry.domain === domain)?.score;
+  return Math.round((score ?? 0) * 100);
+}
+
+function transferPath(report?: FusionReport) {
+  const details = report?.cross_domain_details;
+  const source = details?.transfer_path?.source ?? details?.source_domain;
+  const target = details?.transfer_path?.target ?? details?.target_domain;
+  return source && target ? `${source} → ${target}` : null;
+}
+
 function filterAlertsForQuery(alerts: AgentAlertsResponse, query: string, itemIds: Set<string>): AgentAlertsResponse {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   const matches = (decision: AgentAlertsResponse['decisions'][number]) => {
@@ -425,7 +444,7 @@ function App() {
   const [notice, setNotice] = useState('Demo edition · run the backend pipeline to print live PRISM memory.');
   const [query, setQuery] = useState('multimodal agents');
   const [activeView, setActiveView] = useState<ViewKey>('command');
-  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; citations?: Array<{ item_id: string; title: string; url: string }> }>>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [now] = useState(() => new Date());
 
@@ -611,13 +630,14 @@ function App() {
 }
 
 function Masthead({ dateLabel, notice, loading }: { dateLabel: string; notice: string; loading: boolean }) {
-  const letters = 'Research Intelligence Command Center'.split('  ');
+  const line1 = 'Research Intelligence'.split('');
+  const line2 = 'Command Center'.split('');
   return (
     <motion.header
       className="mb-8"
-      initial={{ opacity: 0, y: -16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: [0.2, 0.7, 0.2, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
     >
       <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.32em] text-bone-mute uppercase">
         <div className="flex items-center gap-3">
@@ -635,10 +655,8 @@ function Masthead({ dateLabel, notice, loading }: { dateLabel: string; notice: s
             exit={{ opacity: 0, x: -8 }}
             transition={{ duration: 0.4 }}
           >
-            <span>VOL. I</span>
-            <span className="text-bone-dim">/</span>
-            <span>EDITION 04</span>
-            <span className="text-bone-dim">/</span>
+
+            <span className="text-bone-dim"></span>
             <span className="text-chartreuse">{notice}</span>
           </motion.div>
         </AnimatePresence>
@@ -647,29 +665,48 @@ function Masthead({ dateLabel, notice, loading }: { dateLabel: string; notice: s
         className="rule-double mt-3 origin-left"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
-        transition={{ duration: 0.9, delay: 0.2, ease: [0.2, 0.7, 0.2, 1] }}
+        transition={{ duration: 0.9, delay: 0.1, ease: [0.2, 0.7, 0.2, 1] }}
       />
       <div className="mt-3 flex items-end justify-between">
         <h1
-          className="prism-title leading-none tracking-tightest"
+          className="prism-title leading-[0.85] tracking-tightest"
           style={{ fontSize: 'clamp(1.5rem, 6vw, 5.5rem)', fontFamily: 'Times New Roman, serif', fontWeight: 400, fontVariationSettings: '"opsz" 144, "SOFT" 80, "WONK" 0' }}
           aria-label="Research Intelligence Command Center"
         >
-          {letters.map((letter, i) => (
-            <motion.span
-              key={i}
-              style={{ display: 'inline-block', color: '#E74C3C' }}
-              initial={{ opacity: 0, y: 60, rotate: -6 }}
-              animate={{ opacity: 1, y: 0, rotate: 0 }}
-              transition={{
-                duration: 0.9,
-                delay: 0.3 + i * 0.07,
-                ease: [0.2, 0.7, 0.2, 1],
-              }}
-            >
-              {letter}
-            </motion.span>
-          ))}
+          <span className="block">
+            {line1.map((letter, i) => (
+              <motion.span
+                key={i}
+                style={{ display: 'inline-block' }}
+                initial={{ opacity: 0, y: 30, rotate: -3 }}
+                animate={{ opacity: 1, y: 0, rotate: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 0.1 + i * 0.02,
+                  ease: [0.2, 0.7, 0.2, 1],
+                }}
+              >
+                {letter === ' ' ? '\u00A0' : letter}
+              </motion.span>
+            ))}
+          </span>
+          <span className="block mt-1">
+            {line2.map((letter, i) => (
+              <motion.span
+                key={i}
+                style={{ display: 'inline-block' }}
+                initial={{ opacity: 0, y: 30, rotate: -3 }}
+                animate={{ opacity: 1, y: 0, rotate: 0 }}
+                transition={{
+                  duration: 0.7,
+                  delay: 0.45 + i * 0.02,
+                  ease: [0.2, 0.7, 0.2, 1],
+                }}
+              >
+                {letter === ' ' ? '\u00A0' : letter}
+              </motion.span>
+            ))}
+          </span>
         </h1>
         <motion.div
           className="hidden md:block text-right"
@@ -713,7 +750,7 @@ function NavBar({
       className="mb-10 space-y-4"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, delay: 0.9 }}
+      transition={{ duration: 0.7, delay: 0.5 }}
     >
       {/* Top tab strip — compact section toggles */}
       <div className="flex items-stretch overflow-x-auto border border-rule bg-ink-deep">
@@ -726,9 +763,8 @@ function NavBar({
               onClick={() => setActiveView(view.key)}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
-              className={`group relative flex shrink-0 items-center gap-2 px-4 py-2.5 transition-colors ${
-                idx > 0 ? 'border-l border-rule' : ''
-              } ${active ? 'text-ink' : 'text-bone-dim hover:bg-ink-soft hover:text-bone'}`}
+              className={`group relative flex shrink-0 items-center gap-2 px-4 py-2.5 transition-colors ${idx > 0 ? 'border-l border-rule' : ''
+                } ${active ? 'text-ink' : 'text-bone-dim hover:bg-ink-soft hover:text-bone'}`}
             >
               {active && (
                 <motion.div
@@ -798,12 +834,12 @@ function CommandCenter({
           className="col-span-12 lg:col-span-8"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.1, ease: [0.2, 0.7, 0.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.7, ease: [0.2, 0.7, 0.2, 1] }}
         >
           <div className="flex items-center gap-4 mb-6">
             <span className="chip chip-chart">— Lead Story —</span>
             <span className="font-mono text-[10px] tracking-[0.32em] text-bone-mute uppercase">
-              §I · Front Page
+              · Front Page
             </span>
             <div className="flex-1 rule-ticker" />
             <span className="font-mono text-[10px] tracking-[0.32em] text-bone-mute">
@@ -838,7 +874,7 @@ function CommandCenter({
           className="col-span-12 lg:col-span-4 lg:border-l lg:border-rule lg:pl-10"
           initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 1.3, ease: [0.2, 0.7, 0.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.9, ease: [0.2, 0.7, 0.2, 1] }}
         >
           <div className="flex justify-center lg:justify-end">
             <ScoreOrb label="PRISM Priority" score={topReport?.prism_score ?? 0} size="lg" />
@@ -868,7 +904,7 @@ function CommandCenter({
       {/* ENGINE STRIP */}
       <section className="mb-16">
         <Reveal>
-          <SectionHeader numeral="§ IV" eyebrow="The Five Engines" title="Today's instrument readings" />
+          <SectionHeader numeral="IV" eyebrow="The Five Engines" title="Today's instrument readings" />
         </Reveal>
         <EngineLegend />
         <ScrollStagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -939,7 +975,7 @@ function SectionHeader({ numeral, eyebrow, title }: { numeral: string; eyebrow: 
 function RankedQueue({ ranked, selectedId, setSelectedId }: any) {
   return (
     <div>
-      <SectionHeader numeral="§ V" eyebrow="Ranked Dispatches" title="The priority queue" />
+      <SectionHeader numeral="  V" eyebrow="Ranked Dispatches" title="The priority queue" />
       <Explainer label="How to Use This Queue">
         All discovered research items, ranked by their overall PRISM priority score. Higher numbers
         mean stronger combined signals across all five engines. Click any item to inspect its full
@@ -992,7 +1028,7 @@ function RankedQueue({ ranked, selectedId, setSelectedId }: any) {
 function SourceMix({ sourceData }: { sourceData: Array<{ name: string; value: number }> }) {
   return (
     <div>
-      <SectionHeader numeral="§ VI" eyebrow="Source Mix" title="Where the signal originates" />
+      <SectionHeader numeral="  VI" eyebrow="Source Mix" title="Where the signal originates" />
       <Explainer label="Why This Matters">
         A healthy intelligence pipeline draws from multiple channels. If one bar dominates, you may
         be missing insights from the others — consider broadening your monitored sources.
@@ -1021,7 +1057,7 @@ function SourceMix({ sourceData }: { sourceData: Array<{ name: string; value: nu
 function DetailPanel({ selected, selectedReport }: any) {
   return (
     <section>
-      <SectionHeader numeral="§ II" eyebrow="Feature" title="Selected dispatch" />
+      <SectionHeader numeral="  II" eyebrow="Feature" title="Selected dispatch" />
       <article className="surface relative p-8">
         <div className="absolute top-0 right-0 diagonal-strike h-full w-24 pointer-events-none" />
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -1056,8 +1092,8 @@ function DetailPanel({ selected, selectedReport }: any) {
             "{selectedReport.verdict}"
           </p>
           <p className="font-body mt-3 text-[13px] italic text-bone-mute leading-relaxed">
-            Generated by PRISM's fusion engine. When enabled, Groq refines the reasoning first;
-            local Ollama llama3 is the fallback before the deterministic heuristics take over.
+            Generated by PRISM's fusion engine. When enabled, local Ollama refines the reasoning first;
+            Groq is the secondary fallback before the deterministic heuristics take over.
           </p>
         </div>
       </article>
@@ -1102,10 +1138,10 @@ function EntityLinks({ detail }: { detail: ItemDetail }) {
 function EngineTrend({ timelineData }: { timelineData: Array<Record<string, number | string>> }) {
   return (
     <section>
-      <SectionHeader numeral="§ VII" eyebrow="Trend Contours" title="The engine over time" />
+      <SectionHeader numeral="  VII" eyebrow="Trend Contours" title="The engine over time" />
       <Explainer label="Reading the Contours">
         <p>
-          <span className="text-chartreuse not-italic">Chartreuse</span> tracks novelty — pre-publication
+          <span className="text-chartreuse not-italic">Chartreuse</span> tracks novelty and
           buzz building up. <span className="text-bone not-italic">Bone</span> tracks trust as
           reproducibility evidence accumulates. <span className="text-oxblood-glow not-italic">Oxblood</span>{' '}
           tracks the adoption gap between research momentum and industry uptake.
@@ -1134,8 +1170,8 @@ function EngineTrend({ timelineData }: { timelineData: Array<Record<string, numb
               <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
               <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
               <Area type="monotone" dataKey="novelty" stroke="#D6FF3D" fill="url(#novelty)" strokeWidth={2} />
-              <Area type="monotone" dataKey="trust"   stroke="#EDE6D3" fill="url(#trust)"   strokeWidth={2} />
-              <Area type="monotone" dataKey="gap"     stroke="#A82A2A" fill="url(#gap)"     strokeWidth={2} />
+              <Area type="monotone" dataKey="trust" stroke="#EDE6D3" fill="url(#trust)" strokeWidth={2} />
+              <Area type="monotone" dataKey="gap" stroke="#A82A2A" fill="url(#gap)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1148,8 +1184,8 @@ function TopicExplorer({ topics, ranked, setSelectedId, setActiveView }: any) {
   return (
     <section className="grid gap-10 xl:grid-cols-[0.85fr_1.15fr]">
       <div>
-        <SectionHeader numeral="§ II" eyebrow="Terrain" title="Research by monitored theme" />
-        <Explainer label="How to Read the Terrain">
+        <SectionHeader numeral="  II" eyebrow="Topics" title="Research by monitored theme" />
+        <Explainer label="How to Read the Topics">
           Items are grouped by topic. Each card shows the average PRISM score, trust level, and
           adoption gap for that theme. Use this view to identify which research areas are producing
           the most actionable intelligence right now.
@@ -1188,7 +1224,7 @@ function TopicExplorer({ topics, ranked, setSelectedId, setActiveView }: any) {
         </div>
       </div>
       <div>
-        <SectionHeader numeral="§ III" eyebrow="Evidence-First Queue" title="Top signals inside the map" />
+        <SectionHeader numeral="  III" eyebrow="Evidence-First Queue" title="Top signals inside the map" />
         <Explainer label="Click to Drill In">
           The highest-priority papers across all topics. Click any card to jump back to the Front
           Page for a full breakdown of that paper's scores, verdict, and supporting evidence.
@@ -1228,7 +1264,7 @@ function ContradictionBattle({ ranked }: any) {
 
   return (
     <section>
-      <SectionHeader numeral="§ III" eyebrow="Debate" title="Where claims are most contested" />
+      <SectionHeader numeral="  III" eyebrow="Debate" title="Where claims are most contested" />
       <Explainer label="What 'Debate' Means" tone="blood">
         The Debate engine surfaces papers whose claims are actively challenged — through replication
         failures, adversarial counter-results, or disputed benchmarks. Higher numbers mean less
@@ -1279,7 +1315,7 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
   return (
     <section className="grid gap-10 xl:grid-cols-[1.1fr_0.9fr]">
       <div>
-        <SectionHeader numeral="§ IV" eyebrow="Adoption Gap Atlas" title="Trusted, but unabsorbed by industry" />
+        <SectionHeader numeral="  IV" eyebrow="Adoption Gap Atlas" title="Trusted, but unabsorbed by industry" />
         <Explainer label="Reading the Scatter">
           A scatter plot of <span className="text-bone not-italic">Trust</span> (X-axis: how
           reproducible the research is) against <span className="text-bone not-italic">Adoption Gap</span>{' '}
@@ -1291,7 +1327,7 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
             <ScatterChart>
               <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
               <XAxis dataKey="x" name="trust" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
-              <YAxis dataKey="y" name="gap"   stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <YAxis dataKey="y" name="gap" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
               <Tooltip cursor={{ strokeDasharray: '3 3', stroke: '#A8A092' }} contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
               <Scatter data={scatter} fill="#D6FF3D" />
             </ScatterChart>
@@ -1300,7 +1336,7 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
         <QuadrantGuide />
       </div>
       <div>
-        <SectionHeader numeral="§ V" eyebrow="Cluster Pressure" title="Topic gap summary" />
+        <SectionHeader numeral="  V" eyebrow="Cluster Pressure" title="Topic gap summary" />
         <Explainer label="Where to Build">
           Average adoption gap per research topic. Longer bars mean academia is further ahead of
           industry in that area. Topics scoring above 60 are strong candidates for new products,
@@ -1328,51 +1364,94 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
 }
 
 function CrossDomainRadar({ ranked }: any) {
-  const radarData = ranked.slice(0, 6).map(({ item, report }: any) => ({
-    topic: item.topic.slice(0, 16),
-    transfer: Math.round((report?.transferability_score ?? 0) * 100),
-    novelty: Math.round((report?.novelty_score ?? 0) * 100),
+  const candidateRows = ranked
+    .filter(({ report }: any) => (report?.transferability_score ?? 0) > 0.2)
+    .slice(0, 5);
+  const visibleCandidates = candidateRows.length ? candidateRows : ranked.slice(0, 5);
+  const domainNames = Array.from(
+    new Set<string>(
+      visibleCandidates.flatMap(({ report }: any) =>
+        (report?.cross_domain_details?.domain_scores ?? [])
+          .filter((entry: any) => entry.score > 0)
+          .map((entry: any) => entry.domain)
+      )
+    )
+  )
+    .sort((left, right) => {
+      const leftMax = Math.max(...visibleCandidates.map(({ report }: any) => domainScore(report, left)));
+      const rightMax = Math.max(...visibleCandidates.map(({ report }: any) => domainScore(report, right)));
+      return rightMax - leftMax;
+    })
+    .slice(0, 7);
+  const radarData = domainNames.map((domain) => ({
+    domain,
+    ...Object.fromEntries(
+      visibleCandidates.map(({ report }: any, index: number) => [`candidate${index}`, domainScore(report, domain)])
+    ),
   }));
+  const hasDomainRadar = radarData.length > 2;
 
   return (
     <section className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr]">
       <div>
-        <SectionHeader numeral="§ V" eyebrow="Transfer" title="Cross-domain paths" />
+        <SectionHeader numeral="  V" eyebrow="Transfer" title="Cross-domain paths" />
         <Explainer label="Reading the Radar">
           <p>
-            <span className="text-chartreuse not-italic">Chartreuse (Transferability)</span> — how
-            applicable is this research to other fields? Techniques like graph neural networks or
-            diffusion models may solve problems in biology, finance, or robotics.
+            Each shape compares one candidate across detected domains. Stronger spread across two
+            or more axes means the paper has a clearer transfer path than a single-domain spike.
           </p>
           <p>
-            <span className="text-oxblood-glow not-italic">Oxblood (Novelty)</span> — how new and
-            unique is this research? High novelty combined with high transfer creates the most
-            valuable cross-pollination opportunities: novel methods applied to unexpected fields.
+            The candidate list shows the topic, inferred source-to-target path, and technique so the
+            chart and evidence read together.
           </p>
         </Explainer>
         <div className="surface p-5 h-[30rem]">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={radarData}>
-              <PolarGrid stroke="rgba(237,230,211,0.12)" />
-              <PolarAngleAxis dataKey="topic" stroke="#EDE6D3" fontSize={10} />
-              <Radar name="transfer" dataKey="transfer" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.32} />
-              <Radar name="novelty"  dataKey="novelty"  stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.18} />
-              <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
-            </RadarChart>
-          </ResponsiveContainer>
+          {hasDomainRadar ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="rgba(237,230,211,0.12)" />
+                <PolarAngleAxis dataKey="domain" stroke="#EDE6D3" fontSize={10} />
+                {visibleCandidates.map(({ item, report }: any, index: number) => (
+                  <Radar
+                    key={item.id}
+                    name={displayTopic(item, report)}
+                    dataKey={`candidate${index}`}
+                    stroke={crossDomainColors[index % crossDomainColors.length]}
+                    fill={crossDomainColors[index % crossDomainColors.length]}
+                    fillOpacity={index === 0 ? 0.22 : 0.08}
+                    strokeWidth={2}
+                  />
+                ))}
+                <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full items-center justify-center text-center font-body text-sm italic leading-relaxed text-bone-warm">
+              Run or refresh the engines to populate per-domain comparison scores for this radar.
+            </div>
+          )}
+        </div>
+        <div className="mt-4 grid gap-2">
+          {visibleCandidates.map(({ item, report }: any, index: number) => (
+            <div key={item.id} className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-mute">
+              <span className="h-2 w-8" style={{ backgroundColor: crossDomainColors[index % crossDomainColors.length] }} />
+              <span>{displayTopic(item, report)}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div>
-        <SectionHeader numeral="§ VI" eyebrow="Transfer Evidence" title="Cross-domain candidates" />
+        <SectionHeader numeral="  VI" eyebrow="Transfer Evidence" title="Cross-domain candidates" />
         <Explainer label="What These Candidates Are">
           Papers where the Cross-Domain Engine detected a plausible transfer path — for example, a
           drug-discovery technique that could work for materials science, or an NLP method
           applicable to code generation.
         </Explainer>
         <div className="space-y-px bg-rule">
-          {ranked
-            .filter(({ report }: any) => (report?.transferability_score ?? 0) > 0.35)
-            .map(({ item, report }: any) => (
+          {visibleCandidates.map(({ item, report }: any) => {
+            const path = transferPath(report);
+            const details = report?.cross_domain_details;
+            return (
               <div key={item.id} className="bg-ink-deep p-5">
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-display text-xl text-bone tracking-tightest">{item.title}</h3>
@@ -1380,11 +1459,17 @@ function CrossDomainRadar({ ranked }: any) {
                     {Math.round((report?.transferability_score ?? 0) * 100)}
                   </span>
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-bone-mute">
+                  <span className="border border-rule px-2 py-1 text-bone">{displayTopic(item, report)}</span>
+                  {path && <span className="border border-rule px-2 py-1">{path}</span>}
+                  {details?.technique && <span className="border border-rule px-2 py-1">{details.technique}</span>}
+                </div>
                 <p className="font-body mt-2 text-sm italic text-bone-warm">
                   {report?.evidence?.find((entry: string) => entry.toLowerCase().includes('cross')) ?? report?.verdict}
                 </p>
               </div>
-            ))}
+            );
+          })}
         </div>
       </div>
     </section>
@@ -1406,7 +1491,7 @@ function EngineHistoryChart({ history, selectedTitle }: { history: EngineRun[]; 
 
   return (
     <section>
-      <SectionHeader numeral="§ VI" eyebrow="Chronicle" title={selectedTitle} />
+      <SectionHeader numeral="  VI" eyebrow="Chronicle" title={selectedTitle} />
       <Explainer label="Reading the Chronicle">
         <p>
           Each point (R1, R2, R3…) represents a separate analysis run for this paper.
@@ -1430,10 +1515,10 @@ function EngineHistoryChart({ history, selectedTitle }: { history: EngineRun[]; 
             <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
             <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
             <Area type="monotone" dataKey="signal" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.12} strokeWidth={2} />
-            <Area type="monotone" dataKey="trust"  stroke="#EDE6D3" fill="#EDE6D3" fillOpacity={0.08} strokeWidth={2} />
+            <Area type="monotone" dataKey="trust" stroke="#EDE6D3" fill="#EDE6D3" fillOpacity={0.08} strokeWidth={2} />
             <Area type="monotone" dataKey="debate" stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.12} strokeWidth={2} />
-            <Area type="monotone" dataKey="gap"    stroke="#7B1E1E" fill="#7B1E1E" fillOpacity={0.1}  strokeWidth={2} />
-            <Area type="monotone" dataKey="cross"  stroke="#3E5C5A" fill="#3E5C5A" fillOpacity={0.1}  strokeWidth={2} />
+            <Area type="monotone" dataKey="gap" stroke="#7B1E1E" fill="#7B1E1E" fillOpacity={0.1} strokeWidth={2} />
+            <Area type="monotone" dataKey="cross" stroke="#3E5C5A" fill="#3E5C5A" fillOpacity={0.1} strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -1481,7 +1566,7 @@ function BenchmarkLab({
   return (
     <section className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr]">
       <div>
-        <SectionHeader numeral="§ VII" eyebrow="Adaptive Metrics" title="Research benchmark lab" />
+        <SectionHeader numeral="  VII" eyebrow="Adaptive Metrics" title="Research benchmark lab" />
         <Explainer label="Dynamic Scoring">
           These metrics recompute from the current query, top-ranked papers, topic terrain, and
           learned persona preferences. Run a new query or record feedback and the dashboard shifts
@@ -1496,8 +1581,8 @@ function BenchmarkLab({
           <p className="eyebrow eyebrow-blood mb-3">Key slots</p>
           <div className="grid gap-px bg-rule md:grid-cols-2">
             {[
-              ['Groq', 'backend/.env -> GROQ_API_KEY'],
-              ['Ollama', 'OLLAMA_BASE_URL=http://localhost:11434 / OLLAMA_MODEL=llama3'],
+              ['Ollama (Primary)', 'OLLAMA_BASE_URL=http://localhost:11434 / OLLAMA_MODEL=llama3'],
+              ['Groq (Fallback)', 'backend/.env -> LLM_API_KEY'],
               ['Neo4j', 'NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD when ENABLE_NEO4J=true'],
               ['Chroma', 'CHROMA_PERSIST_PATH for local RAG memory'],
             ].map(([label, value]) => (
@@ -1525,7 +1610,7 @@ function BenchmarkLab({
         </div>
       </div>
       <div>
-        <SectionHeader numeral="§ VIII" eyebrow="Interest Drift" title="What the user is leaning toward" />
+        <SectionHeader numeral="  VIII" eyebrow="Interest Drift" title="What the user is leaning toward" />
         <Explainer label="Adaptive Suggestions">
           The recommendation layer favors topics where PRISM score, adoption gap, trust, and user
           interest overlap. This is a greedy adaptive ranking: high-opportunity topics rise first,
@@ -1552,7 +1637,7 @@ function AlertCenter({ alerts }: { alerts: AgentAlertsResponse }) {
   const rows = alerts.decisions.length > 0 ? alerts.decisions : alerts.alerts;
   return (
     <section>
-      <SectionHeader numeral="§ VII" eyebrow="Dispatch" title="OpenClaw routing decisions" />
+      <SectionHeader numeral="  VII" eyebrow="Dispatch" title="OpenClaw routing decisions" />
       <ActionRubric />
       <div className="mb-6 grid gap-px bg-rule md:grid-cols-3">
         <Metric label="alerts" value={alerts.alerts.length} />
@@ -1597,7 +1682,7 @@ function OpenClawPanel({ status }: { status: OpenClawStatus | null }) {
   const credentials = status?.credentials_configured ?? {};
   return (
     <section>
-      <SectionHeader numeral="§ VIII" eyebrow="OpenClaw" title="Connector readiness" />
+      <SectionHeader numeral="  VIII" eyebrow="OpenClaw" title="Connector readiness" />
       <Explainer>
         OpenClaw refinement and social connectors are feature-flagged. Configure keys in the backend
         environment, then use this panel to verify what PRISM can reach.
@@ -1621,12 +1706,12 @@ function PersonaDashboard({ persona, ranked, setPersona }: { persona: UserPerson
     try {
       const updated = await api.sendFeedback('default', itemId, action);
       setPersona(updated);
-    } catch {}
+    } catch { }
   }
   const topicRows = Object.entries(persona?.liked_topics ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
   return (
     <section>
-      <SectionHeader numeral="§ IX" eyebrow="Persona" title="Research taste profile" />
+      <SectionHeader numeral="  IX" eyebrow="Persona" title="Research taste profile" />
       <Explainer>
         Persona state learns from likes, stars, dismissals, shares, and ratings. It boosts future
         suggestions by topic and source while preserving the base PRISM score.
@@ -1673,7 +1758,7 @@ function PersonaDashboard({ persona, ranked, setPersona }: { persona: UserPerson
 function SuggestionFeed({ suggestions, setSelectedId, setActiveView }: { suggestions: Suggestion[]; setSelectedId: (id: string) => void; setActiveView: (view: ViewKey) => void }) {
   return (
     <section>
-      <SectionHeader numeral="§ X" eyebrow="Suggest" title="Personalised next reads" />
+      <SectionHeader numeral="  X" eyebrow="Suggest" title="Personalised next reads" />
       <Explainer>
         Suggestions combine the latest PRISM fusion reports with persona topic/source preferences.
       </Explainer>
@@ -1793,7 +1878,7 @@ function Colophon() {
       <div className="rule-double" />
       <div className="grid gap-6 py-8 md:grid-cols-3">
         <div>
-          <p className="eyebrow eyebrow-accent mb-2">§ Manifesto</p>
+          <p className="eyebrow eyebrow-accent mb-2">  Manifesto</p>
           <p className="font-body italic text-sm text-bone-warm leading-snug">
             <Sparkles size={12} className="inline text-chartreuse mr-1" />
             Early detection tells you what is about to matter — long before
@@ -1801,7 +1886,7 @@ function Colophon() {
           </p>
         </div>
         <div>
-          <p className="eyebrow eyebrow-blood mb-2">§ Method</p>
+          <p className="eyebrow eyebrow-blood mb-2">  Method</p>
           <p className="font-body italic text-sm text-bone-warm leading-snug">
             <BrainCircuit size={12} className="inline text-oxblood-glow mr-1" />
             Fusion reasoning turns fragmented signals into decisions, every
@@ -1809,7 +1894,7 @@ function Colophon() {
           </p>
         </div>
         <div>
-          <p className="eyebrow mb-2">§ Colophon</p>
+          <p className="eyebrow mb-2">  Colophon</p>
           <p className="font-body italic text-sm text-bone-warm leading-snug">
             <GitBranch size={12} className="inline text-bone-dim mr-1" />
             Set in Fraunces & Newsreader. Engines modular, palette deliberate,
@@ -1819,7 +1904,7 @@ function Colophon() {
       </div>
       <div className="rule-double" />
       <p className="font-mono text-center text-[10px] tracking-[0.32em] text-bone-mute py-6 uppercase">
-        — End of Edition · PRISM Gazette · Press Cmd/Ctrl-K to open the Archive —
+        — Press Cmd/Ctrl-K to open the Archive —
       </p>
     </footer>
   );

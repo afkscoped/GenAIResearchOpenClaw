@@ -3,9 +3,14 @@ import { Loader2, MessageCircle, Send, ArrowUpRight } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
-type ChatCitation = { item_id: string; title: string; url: string; relevance: number };
-type ChatMessage = { role: 'user' | 'assistant'; content: string; citations?: ChatCitation[] };
-type RankedEntry = { item: { id: string; title: string; topic: string; url: string; abstract: string }; report?: { prism_score: number } };
+import {
+  type ChatCitation,
+  type ChatMessage,
+  type ResearchItem,
+  type FusionReport
+} from '../api/client';
+
+type RankedEntry = { item: ResearchItem; report?: FusionReport };
 
 export function PaperChat({
   ranked,
@@ -22,7 +27,7 @@ export function PaperChat({
   chatLoading: boolean;
   setChatLoading: (v: boolean) => void;
   setSelectedId: (id: string) => void;
-  setActiveView: (v: string) => void;
+  setActiveView: (v: any) => void;
 }) {
   const [input, setInput] = useState('');
   const [focusedPaper, setFocusedPaper] = useState('');

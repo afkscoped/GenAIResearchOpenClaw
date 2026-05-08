@@ -52,7 +52,8 @@ def build_fusion_report(db: Session, item: ResearchItem) -> FusionReportRead:
     return FusionEngine().analyze(item=item, signals=signals, related_items=related_items, links=links)
 
 
-def record_to_fusion_report(record: FusionReportRecord) -> FusionReportRead:
+def record_to_fusion_report(db: Session, record: FusionReportRecord) -> FusionReportRead:
+    engine_run = db.get(EngineRun, record.engine_run_id)
     return FusionReportRead(
         item_id=record.item_id,
         prism_score=record.prism_score,
@@ -63,6 +64,7 @@ def record_to_fusion_report(record: FusionReportRecord) -> FusionReportRead:
         transferability_score=record.transferability_score,
         verdict=record.verdict,
         evidence=record.evidence,
+        cross_domain_details=engine_run.cross_domain_details if engine_run else {},
     )
 
 
@@ -88,12 +90,12 @@ def list_fusion_reports(
             cached = db.query(FusionReportRecord).filter(FusionReportRecord.item_id == item.id).order_by(FusionReportRecord.created_at.desc()).first()
         
         if cached:
-            results.append(record_to_fusion_report(cached))
+            results.append(record_to_fusion_report(db, cached))
         else:
             _, fusion_record = run_and_persist_engines(db, item)
             db.commit()
             db.refresh(fusion_record)
-            results.append(record_to_fusion_report(fusion_record))
+            results.append(record_to_fusion_report(db, fusion_record))
             
     return results
 
@@ -111,13 +113,13 @@ def get_fusion_report(
     cached = None
     if not refresh:
         cached = db.query(FusionReportRecord).filter(FusionReportRecord.item_id == item_id).order_by(FusionReportRecord.created_at.desc()).first()
-    if cached:
-        return record_to_fusion_report(cached)
+        if cached:
+            return record_to_fusion_report(db, cached)
     
     _, fusion_record = run_and_persist_engines(db, item)
     db.commit()
     db.refresh(fusion_record)
-    return record_to_fusion_report(fusion_record)
+    return record_to_fusion_report(db, fusion_record)
 
 
 # ---------------------------------------------------------------------------

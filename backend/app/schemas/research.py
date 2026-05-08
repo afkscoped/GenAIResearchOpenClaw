@@ -15,6 +15,7 @@ SourceName = Literal[
     "papers_with_code",
     "product_launch",
     "engineering_blog",
+    "openalex",
 ]
 
 
@@ -116,6 +117,7 @@ class FusionReportRead(BaseModel):
     transferability_score: float
     verdict: str
     evidence: list[str]
+    cross_domain_details: dict[str, Any] = Field(default_factory=dict)
 
 
 class HealthResponse(BaseModel):
