@@ -1,12 +1,9 @@
-"""
-Groq LLM client for PRISM engine enhancement.
+"""Groq-first LLM client for PRISM engine enhancement.
 
-Uses the Groq API with automatic model fallback:
-  Primary:  llama-3.3-70b-versatile  (best reasoning)
-  Fallback: llama-3.1-8b-instant     (highest rate limits)
-
-When ENABLE_LLM is False or the API call fails, engines continue
-using their existing heuristic verdicts — no breakage.
+The engine path is deliberately resilient:
+- Groq is used first when ENABLE_LLM=true and GROQ_API_KEY/LLM_API_KEY is set.
+- Ollama is used next through the local llama3 model.
+- Heuristic engine verdicts are returned unchanged if both providers fail.
 """
 
 from __future__ import annotations
@@ -14,11 +11,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import httpx
+
 from app.core.config import get_settings
 
 logger = logging.getLogger("prism.engines.llm")
 
-# Model priority: best reasoning first, fastest fallback second
 MODELS = [
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
@@ -34,26 +32,38 @@ def _get_client() -> Any:
         return _groq_client
 
     settings = get_settings()
-    if not settings.enable_llm or not settings.llm_api_key:
+    api_key = settings.groq_api_key or settings.llm_api_key
+    if not settings.enable_llm or not api_key:
         return None
 
     try:
         from groq import Groq  # type: ignore[import-untyped]
 
-        _groq_client = Groq(api_key=settings.llm_api_key)
+        _groq_client = Groq(api_key=api_key)
         logger.info("Groq LLM client initialised successfully.")
         return _groq_client
     except ImportError:
-        logger.warning("groq package not installed — LLM features disabled.")
+        logger.warning("groq package not installed; Groq LLM features disabled.")
         return None
     except Exception as exc:
         logger.warning("Failed to initialise Groq client: %s", exc)
         return None
 
 
+def _ollama_available() -> bool:
+    settings = get_settings()
+    if not settings.enable_llm:
+        return False
+    try:
+        response = httpx.get(f"{settings.ollama_base_url}/api/tags", timeout=2.0)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
 def llm_available() -> bool:
-    """Check whether the LLM client is ready."""
-    return _get_client() is not None
+    """Check whether any LLM provider is ready."""
+    return _get_client() is not None or _ollama_available()
 
 
 def ask_llm(
@@ -63,46 +73,87 @@ def ask_llm(
     max_tokens: int = 150,
     temperature: float = 0.3,
 ) -> str | None:
-    """Send a prompt to Groq and return the response text.
+    """Send a prompt to Groq, then Ollama, and return the response text."""
+    text, _provider = ask_llm_with_provider(
+        system_prompt,
+        user_prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+    return text
 
-    Tries the model from .env first, then falls back to others.
-    """
-    client = _get_client()
-    if client is None:
-        return None
 
+def ask_llm_with_provider(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    max_tokens: int = 150,
+    temperature: float = 0.3,
+) -> tuple[str | None, str]:
+    """Send a prompt and return response text plus provider name."""
     settings = get_settings()
-    logger.info("LLM Model from settings: %s", settings.llm_model)
-    
-    # Prioritise the model from .env, then the defaults
-    model_priority = [settings.llm_model] + [m for m in MODELS if m != settings.llm_model]
+    client = _get_client()
+    if client is not None:
+        model_priority = [settings.llm_model] + [m for m in MODELS if m != settings.llm_model]
+        for model in model_priority:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                text = response.choices[0].message.content
+                if text:
+                    logger.debug("LLM response from Groq %s (%d chars)", model, len(text))
+                    return text.strip(), "groq"
+            except Exception as exc:
+                logger.warning("Groq model %s failed: %s; trying next", model, exc)
 
-    for model in model_priority:
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
+    ollama_text = _ask_ollama(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+    if ollama_text:
+        return ollama_text, "ollama"
+
+    logger.warning("All LLM providers failed; falling back to heuristic verdict.")
+    return None, "heuristic"
+
+
+def _ask_ollama(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    max_tokens: int,
+    temperature: float,
+) -> str | None:
+    settings = get_settings()
+    if not settings.enable_llm:
+        return None
+    try:
+        response = httpx.post(
+            f"{settings.ollama_base_url}/api/chat",
+            json={
+                "model": settings.ollama_model,
+                "stream": False,
+                "options": {"temperature": temperature, "num_predict": max_tokens},
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            text = response.choices[0].message.content
-            if text:
-                logger.debug("LLM response from %s (%d chars)", model, len(text))
-                return text.strip()
-        except Exception as exc:
-            logger.warning("Groq model %s failed: %s — trying next", model, exc)
-            continue
-
-    logger.warning("All Groq models failed; falling back to heuristic verdict.")
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        text = response.json().get("message", {}).get("content")
+        if text:
+            logger.info("LLM response from Ollama %s (%d chars)", settings.ollama_model, len(text))
+            return text.strip()
+    except Exception as exc:
+        logger.warning("Ollama fallback failed: %s", exc)
     return None
 
-
-# ---------------------------------------------------------------------------
-# Pre-built prompt helpers for each PRISM engine
-# ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = (
     "You are PRISM, a research intelligence analyst. "
@@ -120,15 +171,10 @@ def enhance_verdict(
     evidence_points: list[str],
     extra_context: str = "",
 ) -> tuple[str, list[str]]:
-    """Enhance an engine's verdict and evidence using the LLM.
-
-    Returns (enhanced_verdict, enhanced_evidence). If the LLM is
-    unavailable, returns the original heuristic values unchanged.
-    """
+    """Enhance an engine verdict and evidence using the configured LLM stack."""
     if not llm_available():
         return heuristic_verdict, evidence_points
 
-    # Truncate abstract to save tokens
     abstract_snippet = (item_abstract or "")[:600]
     evidence_summary = "; ".join(evidence_points[:5])
 
@@ -145,7 +191,7 @@ def enhance_verdict(
 
     user_prompt += (
         "\nProvide:\n"
-        "1. VERDICT: A single-sentence enhanced verdict (more specific than the heuristic).\n"
+        "1. VERDICT: A single-sentence enhanced verdict.\n"
         "2. INSIGHT: One additional insight the heuristic may have missed.\n"
         "Format your response exactly as:\n"
         "VERDICT: <your verdict>\n"
@@ -156,7 +202,6 @@ def enhance_verdict(
     if response is None:
         return heuristic_verdict, evidence_points
 
-    # Parse the structured response
     enhanced_verdict = heuristic_verdict
     enhanced_evidence = list(evidence_points)
 

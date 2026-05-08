@@ -22,7 +22,7 @@ export function SignalConstellation({ items }: { items: ResearchItem[] }) {
     <section className="surface relative overflow-hidden p-6">
       <div className="flex items-baseline justify-between">
         <div>
-          <p className="eyebrow eyebrow-accent">§ III · Source Constellation</p>
+          <p className="eyebrow eyebrow-accent">III · Source Constellation</p>
           <h2 className="font-display mt-2 text-3xl tracking-tightest text-bone">
             Live signal map
           </h2>

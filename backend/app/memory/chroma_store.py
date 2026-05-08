@@ -29,6 +29,10 @@ class ChromaVectorMemory:
         except Exception:
             self._available = False
 
+    @property
+    def available(self) -> bool:
+        return self._available
+
     def index_items(self, db: Session, items: list[NormalizedItem]) -> int:
         if not self._available or self._collection is None or self._model is None:
             return self.local_fallback.index_items(db, items)

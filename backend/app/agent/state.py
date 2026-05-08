@@ -30,6 +30,7 @@ class AgentState:
     alerts: list[dict[str, Any]] = []
     deliveries: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
+    latest_graph: dict[str, Any] = {}
     _run_lock = Lock()
 
     # -----------------------------------------------------------------------
@@ -87,6 +88,10 @@ class AgentState:
         cls.deliveries = cls.deliveries[:200]
 
     @classmethod
+    def record_graph_run(cls, details: dict[str, Any]) -> None:
+        cls.latest_graph = details
+
+    @classmethod
     def _release_run_lock(cls) -> None:
         try:
             cls._run_lock.release()
@@ -106,6 +111,7 @@ class AgentState:
             "errors": [cls.last_error] if cls.last_error else cls.last_run_details.get("engine_errors", []),
             "alerts_count": len(cls.alerts),
             "deliveries_count": len(cls.deliveries),
+            "latest_graph": cls.latest_graph,
         }
 
     @classmethod

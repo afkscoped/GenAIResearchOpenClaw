@@ -150,3 +150,20 @@ class PaperRating(Base):
     is_favourite: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class AgentRunRecord(Base):
+    __tablename__ = "agent_runs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
+    query: Mapped[str] = mapped_column(String(500), index=True)
+    user_id: Mapped[str] = mapped_column(String(200), index=True, default="default")
+    mode: Mapped[str] = mapped_column(String(50), index=True, default="auto")
+    intent: Mapped[str] = mapped_column(String(50), index=True, default="discover")
+    llm_provider: Mapped[str] = mapped_column(String(50), default="heuristic")
+    status: Mapped[str] = mapped_column(String(50), default="ok")
+    final_answer: Mapped[str] = mapped_column(Text, default="")
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    errors: Mapped[list[str]] = mapped_column(JSON, default=list)
+    timings: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

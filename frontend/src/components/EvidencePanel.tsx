@@ -14,7 +14,7 @@ export function EvidencePanel({ title, evidence }: EvidencePanelProps) {
           <p className="eyebrow eyebrow-accent">{title}</p>
         </div>
         <span className="font-mono text-[10px] tracking-[0.22em] text-bone-mute">
-          §{evidence.length.toString().padStart(2, '0')}
+          {evidence.length.toString().padStart(2, '0')}
         </span>
       </div>
       <p className="font-body mb-4 text-[13px] italic text-bone-mute leading-relaxed">

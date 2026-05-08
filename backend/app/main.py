@@ -10,6 +10,7 @@ logging.basicConfig(
 logger = logging.getLogger("prism")
 
 from app.api.routes_analysis import router as analysis_router
+from app.api.routes_chat import router as chat_router
 from app.api.routes_health import router as health_router
 from app.api.routes_items import router as items_router
 from app.api.routes_memory import router as memory_router
@@ -55,3 +56,4 @@ app.include_router(reports_router)
 app.include_router(agent_router)
 app.include_router(openclaw_router)
 app.include_router(persona_router)
+app.include_router(chat_router)

@@ -110,8 +110,9 @@ export type AgentAlertsResponse = {
 export type OpenClawStatus = {
   enable_openclaw: boolean;
   openclaw_url: string;
-  has_discord_webhook: boolean;
   has_llm_key: boolean;
+  ollama_base_url: string;
+  ollama_model: string;
   credentials_configured: Record<string, boolean>;
 };
 
@@ -135,6 +136,63 @@ export type Suggestion = {
   prism_score: number;
   personalised_score: number;
   reason: string;
+};
+
+export type ChatCitation = {
+  item_id: string;
+  title: string;
+  url: string;
+  relevance: number;
+};
+
+export type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: ChatCitation[];
+};
+
+export type ChatResponse = {
+  answer: string;
+  citations: ChatCitation[];
+  provider: string;
+  context_papers: number;
+  question: string;
+};
+
+export type AgentRankedItem = {
+  item_id: string;
+  title: string;
+  topic: string;
+  source: string;
+  url: string;
+  prism_score: number;
+  personalised_score: number;
+  memory_score: number;
+  graph_score: number;
+  final_score: number;
+  verdict: string;
+  evidence: string[];
+  reason: string;
+};
+
+export type AgentRunResponse = {
+  run_id: string;
+  query: string;
+  user_id: string;
+  mode: string;
+  intent: string;
+  plan: Record<string, unknown>;
+  final_answer: string;
+  ranked_items: AgentRankedItem[];
+  memory_hits: MemorySearchResult[];
+  graph_context: Array<Record<string, unknown>>;
+  engine_summaries: Array<Record<string, unknown>>;
+  provider_used: string;
+  chroma_available: boolean;
+  neo4j_available: boolean;
+  timings: Record<string, number>;
+  errors: string[];
+  created_at?: string;
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
@@ -171,5 +229,28 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item_id: itemId, action }),
     }),
+  runAgentResearch: (query: string, mode: 'auto' | 'discover' | 'compare' | 'recommend' | 'benchmark' = 'auto', userId = 'default') =>
+    request<AgentRunResponse>('/api/agent/research', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, mode, user_id: userId }),
+    }),
+  getAgentRun: (runId: string) => request<Record<string, unknown>>(`/api/agent/runs/${encodeURIComponent(runId)}`),
   weeklyReportUrl: () => `${API_BASE}/api/reports/weekly.md`,
+  chatWithPapers: (question: string, itemId?: string) =>
+    request<ChatResponse>('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, item_id: itemId ?? null, context_limit: 8 }),
+    }),
+  debatePapers: (paperAId: string, paperBId: string) =>
+    request<ChatResponse>(`/api/chat/debate?paper_a_id=${encodeURIComponent(paperAId)}&paper_b_id=${encodeURIComponent(paperBId)}`, {
+      method: 'POST',
+    }),
+  rateItem: (itemId: string, userId: string, rating: number, isFavourite: boolean) =>
+    request<Record<string, unknown>>(`/api/items/${encodeURIComponent(itemId)}/rate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, rating, tags: [], notes: '', is_favourite: isFavourite }),
+    }),
 };

@@ -20,9 +20,12 @@ class Settings(BaseSettings):
     papers_with_code_api_url: str = "https://paperswithcode.com/api/v1/papers/"
     crossref_mailto: str | None = None
     enable_llm: bool = False
+    groq_api_key: str | None = None
     llm_api_key: str | None = None
     llm_model: str = "llama-3.3-70b-versatile"
     llm_base_url: str = "https://api.groq.com/openai/v1"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3"
     enable_openclaw: bool = False
     openclaw_url: str = "http://localhost:9000"
     openclaw_timeout_seconds: float = 10.0
@@ -35,12 +38,6 @@ class Settings(BaseSettings):
     neo4j_user: str = "neo4j"
     neo4j_password: str | None = None
     enable_neo4j: bool = False
-    telegram_bot_token: str | None = None
-    telegram_chat_id: str | None = None
-    reddit_client_id: str | None = None
-    reddit_client_secret: str | None = None
-    reddit_username: str | None = None
-    reddit_password: str | None = None
     enable_persona: bool = True
     prism_heartbeat_hours: int = 6
     prism_agent_query: str = "multimodal agents"
@@ -49,7 +46,7 @@ class Settings(BaseSettings):
     prism_soul_profile_path: str = "app/agent/soul_profile.yaml"
     discord_webhook_url: str | None = None
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property
     def cors_origin_list(self) -> List[str]:
