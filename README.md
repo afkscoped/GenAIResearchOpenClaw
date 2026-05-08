@@ -249,7 +249,7 @@ Important variables:
 - `PAPERS_WITH_CODE_API_URL`: optional Papers With Code API base URL. The adapter fails safe and returns no items if the endpoint is unavailable.
 - `CROSSREF_MAILTO`: optional email for Crossref polite-pool requests.
 - `ENABLE_LLM`: reserved for future engine integration.
-- `LLM_API_KEY`: reserved for future engine integration.
+- `OPENAI_API_KEY`: reserved for future engine integration.
 - `ENABLE_SCHEDULER`: set to `true` to start the APScheduler heartbeat.
 - `PRISM_HEARTBEAT_HOURS`: heartbeat interval in hours, minimum effective value is 1.
 - `PRISM_AGENT_QUERY`: research query used by scheduled and manual agent runs.

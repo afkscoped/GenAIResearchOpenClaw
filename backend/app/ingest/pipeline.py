@@ -12,8 +12,8 @@ from app.ingest.github_adapter import GitHubAdapter
 from app.ingest.huggingface_adapter import HuggingFaceAdapter
 from app.ingest.mock_social_adapter import MockJobsAdapter, MockProductLaunchAdapter, MockSocialAdapter
 from app.ingest.news_adapter import NewsAdapter
+from app.ingest.openalex_adapter import OpenAlexAdapter
 from app.ingest.papers_with_code_adapter import PapersWithCodeAdapter
-from app.ingest.semantic_scholar_adapter import SemanticScholarAdapter
 from app.ingest.normalizer import normalize_many
 from app.ingest.seed_data import demo_raw_items
 from app.memory.entity_linker import EntityLinker
@@ -31,7 +31,7 @@ class IngestionPipeline:
         settings = get_settings()
         self.adapters = [
             ArxivAdapter(),
-            SemanticScholarAdapter(),
+            OpenAlexAdapter(),
             CrossrefAdapter(settings.crossref_mailto),
             GitHubAdapter(settings.github_token),
             HuggingFaceAdapter(settings.huggingface_token),
@@ -246,5 +246,5 @@ class IngestionPipeline:
             return True
 
         hits = sum(1 for term in terms if term in haystack)
-        required_hits = min(len(terms), max(1, math.ceil(len(terms) * 0.6)))
+        required_hits = min(len(terms), max(1, math.ceil(len(terms) * 0.4)))
         return hits >= required_hits

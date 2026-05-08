@@ -46,6 +46,18 @@ export type FusionReport = {
   transferability_score: number;
   verdict: string;
   evidence: string[];
+  cross_domain_details?: {
+    source_domain?: string | null;
+    target_domain?: string | null;
+    technique?: string | null;
+    active_domains?: string[];
+    candidate_topics?: string[];
+    domain_scores?: Array<{ domain: string; score: number }>;
+    transfer_path?: {
+      source?: string | null;
+      target?: string | null;
+    };
+  };
 };
 
 export type EngineRun = {
