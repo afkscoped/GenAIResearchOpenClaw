@@ -27,7 +27,9 @@ logger = logging.getLogger("prism.engines.llm")
 
 MODELS = [
     "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
+    "llama-3.1-70b-versatile",
+    "llama3-70b-8192",
+    "mixtral-8x7b-32768",
 ]
 
 # ---------------------------------------------------------------------------
@@ -91,17 +93,17 @@ def _get_client() -> Any:
         return _groq_client
 
     settings = get_settings()
-    api_key = settings.groq_api_key or settings.llm_api_key
+    api_key = settings.llm_api_key or settings.groq_api_key
     if not settings.enable_llm or not api_key:
         return None
 
     try:
-        from groq import Groq  # type: ignore[import-untyped]
+        from groq import Groq
         _groq_client = Groq(api_key=api_key)
-        logger.info("Groq LLM client initialised successfully.")
+        logger.info("Groq API LLM client initialised successfully.")
         return _groq_client
     except ImportError:
-        logger.warning("groq package not installed; Groq LLM features disabled.")
+        logger.warning("groq package not installed; API LLM features disabled.")
         return None
     except Exception as exc:
         logger.warning("Failed to initialise Groq client: %s", exc)
@@ -154,6 +156,12 @@ def ask_llm_with_provider(
     settings = get_settings()
     client = _get_client()
 
+    # 1. Primary: Try Ollama (local) first
+    ollama_text = _ask_ollama(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+    if ollama_text:
+        return ollama_text, "ollama"
+
+    # 2. Fallback: Try Groq (API)
     if client is not None:
         model_priority = [settings.llm_model] + [m for m in MODELS if m != settings.llm_model]
         for model in model_priority:
@@ -166,18 +174,14 @@ def ask_llm_with_provider(
                     ],
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    response_format={"type": "json_object"},  # structured output
+                    response_format={"type": "json_object"},  # Groq supports this for Llama 3
                 )
                 text = response.choices[0].message.content
                 if text:
-                    logger.debug("LLM response from Groq %s (%d chars)", model, len(text))
-                    return text.strip(), "groq"
+                    logger.debug("LLM response from API model %s (%d chars)", model, len(text))
+                    return text.strip(), "groq_api"
             except Exception as exc:
-                logger.warning("Groq model %s failed: %s; trying next", model, exc)
-
-    ollama_text = _ask_ollama(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
-    if ollama_text:
-        return ollama_text, "ollama"
+                logger.warning("API model %s failed: %s; trying next", model, exc)
 
     logger.warning("All LLM providers failed; falling back to heuristic verdict.")
     return None, "heuristic"
@@ -193,6 +197,8 @@ def _ask_ollama(
     settings = get_settings()
     if not settings.enable_llm:
         return None
+
+    # Try /api/chat first (modern Ollama)
     try:
         response = httpx.post(
             f"{settings.ollama_base_url}/api/chat",
@@ -208,13 +214,42 @@ def _ask_ollama(
             },
             timeout=30.0,
         )
-        response.raise_for_status()
-        text = response.json().get("message", {}).get("content")
-        if text:
-            logger.info("LLM response from Ollama %s (%d chars)", settings.ollama_model, len(text))
-            return text.strip()
+        if response.status_code == 200:
+            text = response.json().get("message", {}).get("content")
+            if text:
+                logger.info("LLM response from Ollama chat %s (%d chars)", settings.ollama_model, len(text))
+                return text.strip()
+        else:
+            err_msg = response.json().get("error", "Unknown error")
+            logger.warning("Ollama /api/chat error (status %d): %s", response.status_code, err_msg)
+    except Exception as exc:
+        logger.debug("Ollama /api/chat failed (maybe old version?): %s", exc)
+
+    # Fallback to /api/generate (older Ollama)
+    try:
+        combined_prompt = f"System: {system_prompt}\n\nUser: {user_prompt}"
+        response = httpx.post(
+            f"{settings.ollama_base_url}/api/generate",
+            json={
+                "model": settings.ollama_model,
+                "stream": False,
+                "format": "json",
+                "options": {"temperature": temperature, "num_predict": max_tokens},
+                "prompt": combined_prompt,
+            },
+            timeout=30.0,
+        )
+        if response.status_code == 200:
+            text = response.json().get("response")
+            if text:
+                logger.info("LLM response from Ollama generate %s (%d chars)", settings.ollama_model, len(text))
+                return text.strip()
+        else:
+            err_msg = response.json().get("error", "Unknown error")
+            logger.warning("Ollama /api/generate error (status %d): %s", response.status_code, err_msg)
     except Exception as exc:
         logger.warning("Ollama fallback failed: %s", exc)
+    
     return None
 
 
@@ -364,7 +399,12 @@ def enhance_verdict_batch(items: list[_BatchItem]) -> list[EnhancedResult]:
     # --- LLM batch call ---
     pending_items = [items[idx] for idx in pending_indices]
     batch_prompt = _build_batch_prompt(pending_items)
-    raw, provider = ask_llm_with_provider(SYSTEM_PROMPT, batch_prompt, max_tokens=300 * len(pending_items))
+    # Ollama is now the primary provider for all tasks
+    raw, provider = ask_llm_with_provider(
+        SYSTEM_PROMPT, 
+        batch_prompt, 
+        max_tokens=300 * len(pending_items)
+    )
 
     if raw is not None:
         try:

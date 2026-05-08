@@ -66,39 +66,55 @@ MODELS = [
 ]
 
 
-def _ask_llm(system: str, user: str, max_tokens: int = 250) -> str | None:
-    api_key = os.getenv("OPENAI_API_KEY")
+def _get_groq_client() -> Any:
+    global _groq_client
+    if _groq_client is not None:
+        return _groq_client
+
+    api_key = os.getenv("LLM_API_KEY")
     if not api_key:
-        logger.warning("OPENAI_API_KEY not set — OpenClaw will use heuristic fallback.")
+        logger.warning("LLM_API_KEY not set — OpenClaw will use heuristic fallback.")
         return None
 
-    base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-    model = os.getenv("OPENAI_MODEL", "gpt-4o")
-    
-    import requests
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "max_tokens": max_tokens,
-        "temperature": 0.3,
-    }
-
     try:
-        resp = requests.post(f"{base_url}/chat/completions", headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        text = resp.json()["choices"][0]["message"]["content"]
-        if text:
-            logger.info("INFO: LLM response from %s (%d chars)", model, len(text))
-            return text.strip()
+        from groq import Groq
+        _groq_client = Groq(api_key=api_key)
+        logger.info("[OK] Groq LLM client initialised for OpenClaw.")
+        return _groq_client
+    except ImportError:
+        logger.warning("groq package not installed. pip install groq")
+        return None
     except Exception as e:
-        logger.warning("[!] Model %s failed: %s", model, e)
+        logger.warning("Failed to init Groq: %s", e)
+        return None
+
+
+def _ask_llm(system: str, user: str, max_tokens: int = 250) -> str | None:
+    client = _get_groq_client()
+    if client is None:
+        return None
+
+    model = os.getenv("LLM_MODEL", MODELS[0])
+    model_priority = [model] + [m for m in MODELS if m != model]
+
+    for m in model_priority:
+        try:
+            resp = client.chat.completions.create(
+                model=m,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
+            text = resp.choices[0].message.content
+            if text:
+                logger.info("INFO: LLM response from %s (%d chars)", m, len(text))
+                return text.strip()
+        except Exception as e:
+            logger.warning("[!] Model %s failed: %s — trying next", m, e)
+            continue
 
     return None
 
@@ -224,7 +240,7 @@ def health():
     return {
         "status": "ok",
         "service": "openclaw-agent",
-        "llm_available": os.getenv("LLM_API_KEY") is not None,
+        "llm_available": _get_groq_client() is not None,
     }
 
 
