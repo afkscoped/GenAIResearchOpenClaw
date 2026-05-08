@@ -44,8 +44,9 @@ class Settings(BaseSettings):
     prism_agent_limit_per_source: int = 5
     prism_agent_include_demo: bool = True
     prism_soul_profile_path: str = "app/agent/soul_profile.yaml"
+    discord_webhook_url: str | None = None
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property
     def cors_origin_list(self) -> List[str]:

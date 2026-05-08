@@ -70,12 +70,12 @@ function Explainer({
 }) {
   const accent =
     tone === 'chart' ? 'border-l-chartreuse' :
-    tone === 'blood' ? 'border-l-oxblood' :
-    'border-l-bone-dim';
+      tone === 'blood' ? 'border-l-oxblood' :
+        'border-l-bone-dim';
   const labelClass =
     tone === 'chart' ? 'eyebrow eyebrow-accent' :
-    tone === 'blood' ? 'eyebrow eyebrow-blood' :
-    'eyebrow';
+      tone === 'blood' ? 'eyebrow eyebrow-blood' :
+        'eyebrow';
   return (
     <motion.aside
       className={`mb-6 border-l-2 ${accent} bg-ink-deep/60 px-5 py-4`}
@@ -190,11 +190,10 @@ function ActionRubric() {
       <div className="rule-ticker mb-4" />
       <div className="grid gap-px bg-rule md:grid-cols-3">
         {rules.map((r) => (
-          <div key={r.title} className={`bg-ink-deep p-4 border-l-2 ${
-            r.tone === 'chart' ? 'border-l-chartreuse' :
+          <div key={r.title} className={`bg-ink-deep p-4 border-l-2 ${r.tone === 'chart' ? 'border-l-chartreuse' :
             r.tone === 'blood' ? 'border-l-oxblood' :
-            'border-l-bone-dim'
-          }`}>
+              'border-l-bone-dim'
+            }`}>
             <div className="flex items-center gap-2">
               <span className="text-base">{r.icon}</span>
               <h4 className="font-display text-lg italic text-bone tracking-tightest">{r.title}</h4>
@@ -231,12 +230,11 @@ function QuadrantGuide() {
         {cells.map((c) => (
           <div
             key={c.label}
-            className={`bg-ink-deep p-4 ${
-              c.tone === 'chart' ? 'border-l-2 border-l-chartreuse' :
+            className={`bg-ink-deep p-4 ${c.tone === 'chart' ? 'border-l-2 border-l-chartreuse' :
               c.tone === 'blood' ? 'border-l-2 border-l-oxblood' :
-              c.tone === 'bone' ? 'border-l-2 border-l-bone-dim' :
-              'border-l-2 border-l-rule'
-            }`}
+                c.tone === 'bone' ? 'border-l-2 border-l-bone-dim' :
+                  'border-l-2 border-l-rule'
+              }`}
           >
             <div className="flex items-baseline gap-3">
               <span className="numeral text-3xl text-bone-dim" style={{ lineHeight: 1 }}>{c.pos}</span>
@@ -302,6 +300,7 @@ import {
 import {
   api,
   type AgentAlertsResponse,
+  type ChatMessage,
   type ChatResponse,
   type EngineRun,
   type FusionReport,
@@ -331,16 +330,16 @@ type ViewKey = 'command' | 'topics' | 'debate' | 'atlas' | 'radar' | 'history' |
 const sourceColors = ['#D6FF3D', '#EDE6D3', '#A82A2A', '#3E5C5A', '#A8A092', '#7B1E1E'];
 
 const views: Array<{ key: ViewKey; label: string; icon: typeof Activity; numeral: string }> = [
-  { key: 'command',  label: 'Front Page', icon: Activity,     numeral: 'I' },
-  { key: 'topics',   label: 'Terrain',    icon: Telescope,    numeral: 'II' },
-  { key: 'debate',   label: 'Debate',     icon: Swords,       numeral: 'III' },
-  { key: 'atlas',    label: 'Atlas',      icon: Layers3,      numeral: 'IV' },
-  { key: 'radar',    label: 'Transfer',   icon: RadarIcon,    numeral: 'V' },
-  { key: 'history',  label: 'Chronicle',  icon: TrendingUp,   numeral: 'VI' },
-  { key: 'benchmarks', label: 'Metrics',   icon: Bell,         numeral: 'VII' },
-  { key: 'persona',  label: 'Persona',     icon: ShieldCheck,  numeral: 'VIII' },
-  { key: 'suggest',  label: 'Suggest',     icon: Sparkles,     numeral: 'IX' },
-  { key: 'chat',     label: 'Ask Papers', icon: MessageCircle, numeral: 'X' },
+  { key: 'command', label: 'Front Page', icon: Activity, numeral: 'I' },
+  { key: 'topics', label: 'Topics', icon: Telescope, numeral: 'II' },
+  { key: 'debate', label: 'Debate', icon: Swords, numeral: 'III' },
+  { key: 'atlas', label: 'Atlas', icon: Layers3, numeral: 'IV' },
+  { key: 'radar', label: 'Cross-Domain', icon: RadarIcon, numeral: 'V' },
+  { key: 'history', label: 'Chronicle', icon: TrendingUp, numeral: 'VI' },
+  { key: 'benchmarks', label: 'Metrics', icon: Bell, numeral: 'VII' },
+  { key: 'persona', label: 'Persona', icon: ShieldCheck, numeral: 'VIII' },
+  { key: 'suggest', label: 'Suggest', icon: Sparkles, numeral: 'IX' },
+  { key: 'chat', label: 'Ask Papers', icon: MessageCircle, numeral: 'X' },
 ];
 
 function byReport(items: ResearchItem[], reports: FusionReport[]) {
@@ -425,7 +424,7 @@ function App() {
   const [notice, setNotice] = useState('Demo edition · run the backend pipeline to print live PRISM memory.');
   const [query, setQuery] = useState('multimodal agents');
   const [activeView, setActiveView] = useState<ViewKey>('command');
-  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; citations?: Array<{ item_id: string; title: string; url: string }> }>>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [now] = useState(() => new Date());
 
@@ -635,10 +634,8 @@ function Masthead({ dateLabel, notice, loading }: { dateLabel: string; notice: s
             exit={{ opacity: 0, x: -8 }}
             transition={{ duration: 0.4 }}
           >
-            <span>VOL. I</span>
-            <span className="text-bone-dim">/</span>
-            <span>EDITION 04</span>
-            <span className="text-bone-dim">/</span>
+
+            <span className="text-bone-dim"></span>
             <span className="text-chartreuse">{notice}</span>
           </motion.div>
         </AnimatePresence>
@@ -726,9 +723,8 @@ function NavBar({
               onClick={() => setActiveView(view.key)}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
-              className={`group relative flex shrink-0 items-center gap-2 px-4 py-2.5 transition-colors ${
-                idx > 0 ? 'border-l border-rule' : ''
-              } ${active ? 'text-ink' : 'text-bone-dim hover:bg-ink-soft hover:text-bone'}`}
+              className={`group relative flex shrink-0 items-center gap-2 px-4 py-2.5 transition-colors ${idx > 0 ? 'border-l border-rule' : ''
+                } ${active ? 'text-ink' : 'text-bone-dim hover:bg-ink-soft hover:text-bone'}`}
             >
               {active && (
                 <motion.div
@@ -803,7 +799,7 @@ function CommandCenter({
           <div className="flex items-center gap-4 mb-6">
             <span className="chip chip-chart">— Lead Story —</span>
             <span className="font-mono text-[10px] tracking-[0.32em] text-bone-mute uppercase">
-              §I · Front Page
+              · Front Page
             </span>
             <div className="flex-1 rule-ticker" />
             <span className="font-mono text-[10px] tracking-[0.32em] text-bone-mute">
@@ -868,7 +864,7 @@ function CommandCenter({
       {/* ENGINE STRIP */}
       <section className="mb-16">
         <Reveal>
-          <SectionHeader numeral="§ IV" eyebrow="The Five Engines" title="Today's instrument readings" />
+          <SectionHeader numeral="IV" eyebrow="The Five Engines" title="Today's instrument readings" />
         </Reveal>
         <EngineLegend />
         <ScrollStagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -939,7 +935,7 @@ function SectionHeader({ numeral, eyebrow, title }: { numeral: string; eyebrow: 
 function RankedQueue({ ranked, selectedId, setSelectedId }: any) {
   return (
     <div>
-      <SectionHeader numeral="§ V" eyebrow="Ranked Dispatches" title="The priority queue" />
+      <SectionHeader numeral="  V" eyebrow="Ranked Dispatches" title="The priority queue" />
       <Explainer label="How to Use This Queue">
         All discovered research items, ranked by their overall PRISM priority score. Higher numbers
         mean stronger combined signals across all five engines. Click any item to inspect its full
@@ -992,7 +988,7 @@ function RankedQueue({ ranked, selectedId, setSelectedId }: any) {
 function SourceMix({ sourceData }: { sourceData: Array<{ name: string; value: number }> }) {
   return (
     <div>
-      <SectionHeader numeral="§ VI" eyebrow="Source Mix" title="Where the signal originates" />
+      <SectionHeader numeral="  VI" eyebrow="Source Mix" title="Where the signal originates" />
       <Explainer label="Why This Matters">
         A healthy intelligence pipeline draws from multiple channels. If one bar dominates, you may
         be missing insights from the others — consider broadening your monitored sources.
@@ -1021,7 +1017,7 @@ function SourceMix({ sourceData }: { sourceData: Array<{ name: string; value: nu
 function DetailPanel({ selected, selectedReport }: any) {
   return (
     <section>
-      <SectionHeader numeral="§ II" eyebrow="Feature" title="Selected dispatch" />
+      <SectionHeader numeral="  II" eyebrow="Feature" title="Selected dispatch" />
       <article className="surface relative p-8">
         <div className="absolute top-0 right-0 diagonal-strike h-full w-24 pointer-events-none" />
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -1102,12 +1098,12 @@ function EntityLinks({ detail }: { detail: ItemDetail }) {
 function EngineTrend({ timelineData }: { timelineData: Array<Record<string, number | string>> }) {
   return (
     <section>
-      <SectionHeader numeral="§ VII" eyebrow="Trend Contours" title="The engine over time" />
+      <SectionHeader numeral="  VII" eyebrow="Trend Contours" title="The engine over time" />
       <Explainer label="Reading the Contours">
         <p>
-          <span className="text-chartreuse not-italic">Chartreuse</span> tracks novelty — pre-publication
+          <span className="text-chartreuse not-italic"></span> tracks novelty — pre-publication
           buzz building up. <span className="text-bone not-italic">Bone</span> tracks trust as
-          reproducibility evidence accumulates. <span className="text-oxblood-glow not-italic">Oxblood</span>{' '}
+          reproducibility evidence accumulates. <span className="text-oxblood-glow not-italic"></span>{' '}
           tracks the adoption gap between research momentum and industry uptake.
         </p>
       </Explainer>
@@ -1134,8 +1130,8 @@ function EngineTrend({ timelineData }: { timelineData: Array<Record<string, numb
               <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
               <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
               <Area type="monotone" dataKey="novelty" stroke="#D6FF3D" fill="url(#novelty)" strokeWidth={2} />
-              <Area type="monotone" dataKey="trust"   stroke="#EDE6D3" fill="url(#trust)"   strokeWidth={2} />
-              <Area type="monotone" dataKey="gap"     stroke="#A82A2A" fill="url(#gap)"     strokeWidth={2} />
+              <Area type="monotone" dataKey="trust" stroke="#EDE6D3" fill="url(#trust)" strokeWidth={2} />
+              <Area type="monotone" dataKey="gap" stroke="#A82A2A" fill="url(#gap)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1148,8 +1144,8 @@ function TopicExplorer({ topics, ranked, setSelectedId, setActiveView }: any) {
   return (
     <section className="grid gap-10 xl:grid-cols-[0.85fr_1.15fr]">
       <div>
-        <SectionHeader numeral="§ II" eyebrow="Terrain" title="Research by monitored theme" />
-        <Explainer label="How to Read the Terrain">
+        <SectionHeader numeral="  II" eyebrow="Topics" title="Research by monitored theme" />
+        <Explainer label="How to Read the Topics">
           Items are grouped by topic. Each card shows the average PRISM score, trust level, and
           adoption gap for that theme. Use this view to identify which research areas are producing
           the most actionable intelligence right now.
@@ -1188,7 +1184,7 @@ function TopicExplorer({ topics, ranked, setSelectedId, setActiveView }: any) {
         </div>
       </div>
       <div>
-        <SectionHeader numeral="§ III" eyebrow="Evidence-First Queue" title="Top signals inside the map" />
+        <SectionHeader numeral="  III" eyebrow="Evidence-First Queue" title="Top signals inside the map" />
         <Explainer label="Click to Drill In">
           The highest-priority papers across all topics. Click any card to jump back to the Front
           Page for a full breakdown of that paper's scores, verdict, and supporting evidence.
@@ -1228,7 +1224,7 @@ function ContradictionBattle({ ranked }: any) {
 
   return (
     <section>
-      <SectionHeader numeral="§ III" eyebrow="Debate" title="Where claims are most contested" />
+      <SectionHeader numeral="  III" eyebrow="Debate" title="Where claims are most contested" />
       <Explainer label="What 'Debate' Means" tone="blood">
         The Debate engine surfaces papers whose claims are actively challenged — through replication
         failures, adversarial counter-results, or disputed benchmarks. Higher numbers mean less
@@ -1279,7 +1275,7 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
   return (
     <section className="grid gap-10 xl:grid-cols-[1.1fr_0.9fr]">
       <div>
-        <SectionHeader numeral="§ IV" eyebrow="Adoption Gap Atlas" title="Trusted, but unabsorbed by industry" />
+        <SectionHeader numeral="  IV" eyebrow="Adoption Gap Atlas" title="Trusted, but unabsorbed by industry" />
         <Explainer label="Reading the Scatter">
           A scatter plot of <span className="text-bone not-italic">Trust</span> (X-axis: how
           reproducible the research is) against <span className="text-bone not-italic">Adoption Gap</span>{' '}
@@ -1291,7 +1287,7 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
             <ScatterChart>
               <CartesianGrid strokeDasharray="0" stroke="rgba(237,230,211,0.06)" />
               <XAxis dataKey="x" name="trust" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
-              <YAxis dataKey="y" name="gap"   stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
+              <YAxis dataKey="y" name="gap" stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
               <Tooltip cursor={{ strokeDasharray: '3 3', stroke: '#A8A092' }} contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
               <Scatter data={scatter} fill="#D6FF3D" />
             </ScatterChart>
@@ -1300,7 +1296,7 @@ function AdoptionGapAtlas({ ranked, topics }: any) {
         <QuadrantGuide />
       </div>
       <div>
-        <SectionHeader numeral="§ V" eyebrow="Cluster Pressure" title="Topic gap summary" />
+        <SectionHeader numeral="  V" eyebrow="Cluster Pressure" title="Topic gap summary" />
         <Explainer label="Where to Build">
           Average adoption gap per research topic. Longer bars mean academia is further ahead of
           industry in that area. Topics scoring above 60 are strong candidates for new products,
@@ -1337,15 +1333,15 @@ function CrossDomainRadar({ ranked }: any) {
   return (
     <section className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr]">
       <div>
-        <SectionHeader numeral="§ V" eyebrow="Transfer" title="Cross-domain paths" />
+        <SectionHeader numeral="  V" eyebrow="Transfer" title="Cross-domain paths" />
         <Explainer label="Reading the Radar">
           <p>
-            <span className="text-chartreuse not-italic">Chartreuse (Transferability)</span> — how
+            <span className="text-chartreuse not-italic">(Transferability)</span> — how
             applicable is this research to other fields? Techniques like graph neural networks or
             diffusion models may solve problems in biology, finance, or robotics.
           </p>
           <p>
-            <span className="text-oxblood-glow not-italic">Oxblood (Novelty)</span> — how new and
+            <span className="text-oxblood-glow not-italic">(Novelty)</span> — how new and
             unique is this research? High novelty combined with high transfer creates the most
             valuable cross-pollination opportunities: novel methods applied to unexpected fields.
           </p>
@@ -1356,14 +1352,14 @@ function CrossDomainRadar({ ranked }: any) {
               <PolarGrid stroke="rgba(237,230,211,0.12)" />
               <PolarAngleAxis dataKey="topic" stroke="#EDE6D3" fontSize={10} />
               <Radar name="transfer" dataKey="transfer" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.32} />
-              <Radar name="novelty"  dataKey="novelty"  stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.18} />
+              <Radar name="novelty" dataKey="novelty" stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.18} />
               <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
       </div>
       <div>
-        <SectionHeader numeral="§ VI" eyebrow="Transfer Evidence" title="Cross-domain candidates" />
+        <SectionHeader numeral="  VI" eyebrow="Transfer Evidence" title="Cross-domain candidates" />
         <Explainer label="What These Candidates Are">
           Papers where the Cross-Domain Engine detected a plausible transfer path — for example, a
           drug-discovery technique that could work for materials science, or an NLP method
@@ -1406,7 +1402,7 @@ function EngineHistoryChart({ history, selectedTitle }: { history: EngineRun[]; 
 
   return (
     <section>
-      <SectionHeader numeral="§ VI" eyebrow="Chronicle" title={selectedTitle} />
+      <SectionHeader numeral="  VI" eyebrow="Chronicle" title={selectedTitle} />
       <Explainer label="Reading the Chronicle">
         <p>
           Each point (R1, R2, R3…) represents a separate analysis run for this paper.
@@ -1430,10 +1426,10 @@ function EngineHistoryChart({ history, selectedTitle }: { history: EngineRun[]; 
             <YAxis stroke="#A8A092" fontSize={10} tickLine={false} axisLine={{ stroke: '#1E1E26' }} />
             <Tooltip contentStyle={{ background: '#070709', border: '1px solid #A8A092', borderRadius: 0, color: '#EDE6D3' }} />
             <Area type="monotone" dataKey="signal" stroke="#D6FF3D" fill="#D6FF3D" fillOpacity={0.12} strokeWidth={2} />
-            <Area type="monotone" dataKey="trust"  stroke="#EDE6D3" fill="#EDE6D3" fillOpacity={0.08} strokeWidth={2} />
+            <Area type="monotone" dataKey="trust" stroke="#EDE6D3" fill="#EDE6D3" fillOpacity={0.08} strokeWidth={2} />
             <Area type="monotone" dataKey="debate" stroke="#A82A2A" fill="#A82A2A" fillOpacity={0.12} strokeWidth={2} />
-            <Area type="monotone" dataKey="gap"    stroke="#7B1E1E" fill="#7B1E1E" fillOpacity={0.1}  strokeWidth={2} />
-            <Area type="monotone" dataKey="cross"  stroke="#3E5C5A" fill="#3E5C5A" fillOpacity={0.1}  strokeWidth={2} />
+            <Area type="monotone" dataKey="gap" stroke="#7B1E1E" fill="#7B1E1E" fillOpacity={0.1} strokeWidth={2} />
+            <Area type="monotone" dataKey="cross" stroke="#3E5C5A" fill="#3E5C5A" fillOpacity={0.1} strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -1481,7 +1477,7 @@ function BenchmarkLab({
   return (
     <section className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr]">
       <div>
-        <SectionHeader numeral="§ VII" eyebrow="Adaptive Metrics" title="Research benchmark lab" />
+        <SectionHeader numeral="  VII" eyebrow="Adaptive Metrics" title="Research benchmark lab" />
         <Explainer label="Dynamic Scoring">
           These metrics recompute from the current query, top-ranked papers, topic terrain, and
           learned persona preferences. Run a new query or record feedback and the dashboard shifts
@@ -1525,7 +1521,7 @@ function BenchmarkLab({
         </div>
       </div>
       <div>
-        <SectionHeader numeral="§ VIII" eyebrow="Interest Drift" title="What the user is leaning toward" />
+        <SectionHeader numeral="  VIII" eyebrow="Interest Drift" title="What the user is leaning toward" />
         <Explainer label="Adaptive Suggestions">
           The recommendation layer favors topics where PRISM score, adoption gap, trust, and user
           interest overlap. This is a greedy adaptive ranking: high-opportunity topics rise first,
@@ -1552,7 +1548,7 @@ function AlertCenter({ alerts }: { alerts: AgentAlertsResponse }) {
   const rows = alerts.decisions.length > 0 ? alerts.decisions : alerts.alerts;
   return (
     <section>
-      <SectionHeader numeral="§ VII" eyebrow="Dispatch" title="OpenClaw routing decisions" />
+      <SectionHeader numeral="  VII" eyebrow="Dispatch" title="OpenClaw routing decisions" />
       <ActionRubric />
       <div className="mb-6 grid gap-px bg-rule md:grid-cols-3">
         <Metric label="alerts" value={alerts.alerts.length} />
@@ -1597,7 +1593,7 @@ function OpenClawPanel({ status }: { status: OpenClawStatus | null }) {
   const credentials = status?.credentials_configured ?? {};
   return (
     <section>
-      <SectionHeader numeral="§ VIII" eyebrow="OpenClaw" title="Connector readiness" />
+      <SectionHeader numeral="  VIII" eyebrow="OpenClaw" title="Connector readiness" />
       <Explainer>
         OpenClaw refinement and social connectors are feature-flagged. Configure keys in the backend
         environment, then use this panel to verify what PRISM can reach.
@@ -1621,12 +1617,12 @@ function PersonaDashboard({ persona, ranked, setPersona }: { persona: UserPerson
     try {
       const updated = await api.sendFeedback('default', itemId, action);
       setPersona(updated);
-    } catch {}
+    } catch { }
   }
   const topicRows = Object.entries(persona?.liked_topics ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
   return (
     <section>
-      <SectionHeader numeral="§ IX" eyebrow="Persona" title="Research taste profile" />
+      <SectionHeader numeral="  IX" eyebrow="Persona" title="Research taste profile" />
       <Explainer>
         Persona state learns from likes, stars, dismissals, shares, and ratings. It boosts future
         suggestions by topic and source while preserving the base PRISM score.
@@ -1673,7 +1669,7 @@ function PersonaDashboard({ persona, ranked, setPersona }: { persona: UserPerson
 function SuggestionFeed({ suggestions, setSelectedId, setActiveView }: { suggestions: Suggestion[]; setSelectedId: (id: string) => void; setActiveView: (view: ViewKey) => void }) {
   return (
     <section>
-      <SectionHeader numeral="§ X" eyebrow="Suggest" title="Personalised next reads" />
+      <SectionHeader numeral="  X" eyebrow="Suggest" title="Personalised next reads" />
       <Explainer>
         Suggestions combine the latest PRISM fusion reports with persona topic/source preferences.
       </Explainer>
@@ -1793,7 +1789,7 @@ function Colophon() {
       <div className="rule-double" />
       <div className="grid gap-6 py-8 md:grid-cols-3">
         <div>
-          <p className="eyebrow eyebrow-accent mb-2">§ Manifesto</p>
+          <p className="eyebrow eyebrow-accent mb-2">  Manifesto</p>
           <p className="font-body italic text-sm text-bone-warm leading-snug">
             <Sparkles size={12} className="inline text-chartreuse mr-1" />
             Early detection tells you what is about to matter — long before
@@ -1801,7 +1797,7 @@ function Colophon() {
           </p>
         </div>
         <div>
-          <p className="eyebrow eyebrow-blood mb-2">§ Method</p>
+          <p className="eyebrow eyebrow-blood mb-2">  Method</p>
           <p className="font-body italic text-sm text-bone-warm leading-snug">
             <BrainCircuit size={12} className="inline text-oxblood-glow mr-1" />
             Fusion reasoning turns fragmented signals into decisions, every
@@ -1809,7 +1805,7 @@ function Colophon() {
           </p>
         </div>
         <div>
-          <p className="eyebrow mb-2">§ Colophon</p>
+          <p className="eyebrow mb-2">  Colophon</p>
           <p className="font-body italic text-sm text-bone-warm leading-snug">
             <GitBranch size={12} className="inline text-bone-dim mr-1" />
             Set in Fraunces & Newsreader. Engines modular, palette deliberate,
@@ -1819,7 +1815,7 @@ function Colophon() {
       </div>
       <div className="rule-double" />
       <p className="font-mono text-center text-[10px] tracking-[0.32em] text-bone-mute py-6 uppercase">
-        — End of Edition · PRISM Gazette · Press Cmd/Ctrl-K to open the Archive —
+        — Press Cmd/Ctrl-K to open the Archive —
       </p>
     </footer>
   );

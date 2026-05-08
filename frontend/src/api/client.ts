@@ -145,6 +145,12 @@ export type ChatCitation = {
   relevance: number;
 };
 
+export type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: ChatCitation[];
+};
+
 export type ChatResponse = {
   answer: string;
   citations: ChatCitation[];
