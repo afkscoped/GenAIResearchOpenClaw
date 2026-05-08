@@ -73,8 +73,8 @@ return EngineResult(score=score, verdict=enhanced_verdict, evidence=enhanced_evi
 ### 3.3 Enable in .env
 ```
 ENABLE_LLM=true
-OPENAI_API_KEY=sk_your_openai_key_here
-OPENAI_MODEL=gpt-4o
+LLM_API_KEY=gsk_your_groq_key_here
+LLM_MODEL=llama-3.3-70b-versatile
 ```
 
 ### 3.4 New Route: `/api/openclaw/analyze`
@@ -564,8 +564,8 @@ torch>=2.6        # GPU-accelerated embeddings
 ```bash
 # Existing
 ENABLE_LLM=true
-OPENAI_API_KEY=sk_...
-OPENAI_MODEL=gpt-4o
+LLM_API_KEY=gsk_...
+LLM_MODEL=llama-3.3-70b-versatile
 ENABLE_SCHEDULER=true
 
 # Phase 3 — ChromaDB
